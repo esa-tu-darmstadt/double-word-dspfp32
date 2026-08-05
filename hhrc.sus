@@ -1,8 +1,8 @@
 
-module SUS_DWPlusDW_Accurate {
+module SUS_DWTimesDW_Fast {
     clock aclk
 
-    gen int TYPE = 3
+    gen int TYPE = 7
 
     output bool                               saxis_a_tready'0 = true
     input  bool                               saxis_a_tvalid'0
@@ -239,18 +239,18 @@ module DWPlusDW_Accurate {
     float c = x0.res
 
     FastTwoSum#(A_LATENCY: 2) v
-    v.a = sh
+    v.a = dspfp32_delay#(DELAY: 1)(sh)
     v.b = c
     float vh = v.rh
     float vl = v.rl
 
     dspfp32_add#(D_LATENCY: 0, C_LATENCY: 3) x1
     x1.d = vl
-    x1.c = tl
+    x1.c = dspfp32_delay#(DELAY: 1)(tl)
     float w = x1.res
 
     FastTwoSum#(A_LATENCY: 2) r
-    r.a = vh
+    r.a = dspfp32_delay#(DELAY: 1)(vh)
     r.b = w
 
     /*
@@ -296,23 +296,28 @@ module DWTimesFP_Fast {
     TwoProd c
     c.a = xh
     c.b = y
+    float ch = c.rh
+    float cl = c.rl
 
-    dspfp32_add#(D_LATENCY: 0, C_LATENCY: 0) x1 // mul
-    x1.d = xl
-    x1.c = y
-    float cl2 = x1.res
+    dspfp32_mac_a_b_c#(A_REGS: 1, B_REGS: 1, C_REGS: 0) dsp0
+    dsp0.apply(xl, y, 0.0)
+    float cl2 = dsp0.fpa_out
+    float _t0 = dsp0.fpm_out
+    float _t1 = dsp0.pcout
 
-    dspfp32_add#(D_LATENCY: 0, C_LATENCY: 0) x2 // mul
-    x2.d = c.rl
-    x2.c = cl2
-    float cl3 = x2.res
+    dspfp32_add_c_d#(C_REGS: 3, D_REGS: 0) dsp1
+    dsp1.apply(dspfp32_delay#(DELAY: 3)(cl2), cl)
+    float cl3 = dsp1.fpa_out
+    float _t2 = dsp1.pcout
 
-    FastTwoSum#(A_LATENCY: 0) r
-    r.a = c.rh
+    FastTwoSum#(A_LATENCY: 2) r
+    r.a = dspfp32_delay#(DELAY: 5)(ch)
     r.b = cl3
+    float _rh = r.rh
+    float _rl = r.rl
 
-    rh = r.rh
-    rl = r.rl
+    rh = _rh
+    rl = _rl
 
     /*
     two<T> c = algorithms::TwoProd(x.h, y);
@@ -321,8 +326,6 @@ module DWTimesFP_Fast {
     return algorithms::FastTwoSum(c.h, cl3);
     */
 
-    rh = y
-    rl = y
 }
 
 module DWTimesFP_Accurate {
@@ -338,27 +341,33 @@ module DWTimesFP_Accurate {
     TwoProd c
     c.a = xh
     c.b = y
+    float ch = c.rh
+    float cl = c.rl
 
-    dspfp32_add#(D_LATENCY: 0, C_LATENCY: 0) x1 // mul
-    x1.d = xl
-    x1.c = y
-    float cl2 = x1.res
+    dspfp32_mul_a_b#(A_REGS: 0, B_REGS: 0) dsp0
+    dsp0.apply(xl, y)
+    float cl2 = dsp0.fpm_out
+    float _t1 = dsp0.pcout
 
-    FastTwoSum#(A_LATENCY: 0) t
-    t.a = c.rh
-    t.b = cl2
+    FastTwoSum#(A_LATENCY: 2) t
+    t.a = cl2
+    t.b = ch
+    float th = t.rh
+    float tl = t.rl
 
-    dspfp32_add#(D_LATENCY: 0, C_LATENCY: 0) x2
-    x2.d = t.rl
-    x2.c = c.rl
-    float tl2 = x2.res
+    dspfp32_add_c_d#(C_REGS: 3, D_REGS: 0) dsp1
+    dsp1.apply(tl, cl)
+    float tl2 = dsp1.fpa_out
+    float _t2 = dsp1.pcout
 
-    FastTwoSum#(A_LATENCY: 0) r
-    r.a = t.rh
+    FastTwoSum#(A_LATENCY: 2) r
+    r.a = dspfp32_delay#(DELAY: 4)(th)
     r.b = tl2
+    float _rh = r.rh
+    float _rl = r.rl
 
-    rh = r.rh
-    rl = r.rl
+    rh = _rh
+    rl = _rl
 
     /*
     two<T> c = algorithms::TwoProd(x.h, y);
@@ -368,8 +377,6 @@ module DWTimesFP_Accurate {
     return algorithms::FastTwoSum(t.h, tl2);
     */
 
-    rh = y
-    rl = y
 }
 
 module DWTimesDW_Fast {
@@ -386,29 +393,24 @@ module DWTimesDW_Fast {
     TwoProd c
     c.a = xh
     c.b = yh
+    float ch = c.rh
+    float cl = c.rl
 
-    dspfp32_add#(D_LATENCY: 0, C_LATENCY: 0) x1 // mul
-    x1.d = xh
-    x1.c = yl
-    float tl1 = x1.res
+    dspfp32_mul_a_b#(A_REGS: 1, B_REGS: 1) dsp0
+    dsp0.apply(xh, yl)
+    float tl1 = dsp0.pcout
 
-    dspfp32_add#(D_LATENCY: 0, C_LATENCY: 0) x2 // mul
-    x2.d = xl
-    x2.c = yh
-    float tl2 = x2.res
+    dspfp32_mac_a_b_pcin#(A_REGS: 1, B_REGS: 1) dsp1
+    dsp1.apply(xl, yh, tl1)
+    float tl2 = dsp1.fpm_out
+    float cl2 = dsp1.fpa_out
 
-    dspfp32_add#(D_LATENCY: 0, C_LATENCY: 0) x3
-    x3.d = tl1
-    x3.c = tl2
-    float cl2 = x3.res
+    dspfp32_add_c_d#(C_REGS: 3, D_REGS: 0) dsp2
+    dsp2.apply(dspfp32_delay#(DELAY: 3)(cl2), cl)
+    float cl3 = dsp2.fpa_out
 
-    dspfp32_add#(D_LATENCY: 0, C_LATENCY: 0) x4
-    x4.d = c.rl
-    x4.c = cl2
-    float cl3 = x4.res
-
-    FastTwoSum#(A_LATENCY: 0) r
-    r.a = c.rh
+    FastTwoSum#(A_LATENCY: 2) r
+    r.a = dspfp32_delay#(DELAY: 5)(ch)
     r.b = cl3
 
     rh = r.rh
@@ -577,10 +579,6 @@ module FastTwoSum#(int A_LATENCY) {
     x2.c = b
     rl = x2.res
 
-    action rh_c: -> float out {
-        out = x2.res
-    }
-
     /*
         two<T> res;
         res.h = a + b;
@@ -600,10 +598,19 @@ module TwoProd {
     output float rh
     output float rl
 
-    dspfp32_mul x0
-    x0.c = a
-    x0.d = b
-    rh = x0.res
+    bool[7] ADD_C_M    = 7'b00_110_01
+    bool[7] SUB_M_C    = 7'b10_110_01
+    bool[7] ADD_M_PCIN0 = 7'b00_111_01
+    bool[7] ADD_M_PCIN1 = 7'b00_111_01
+    bool[7] ADD_M_PCIN2 = 7'b00_111_01
+
+    // rh = a * b + 0.0
+    dspfp32_full#(A_REGS: 1, B_REGS: 1, C_REGS: 0, D_REGS: 0, M_REGS: 2, OP_REGS: 0, ACIN: 0, PCOUT_FPA: 1) dsp0
+    dsp0.apply(a, b, 0.0, 0.0, 0.0, 0.0, ADD_C_M)
+    float _t0  = dsp0.fpm_out
+    float rh2 = dsp0.fpa_out
+    float _t1  = dsp0.pcout
+    float _t2  = dsp0.acout
 
     Split a1
     a1.x = a
@@ -615,29 +622,43 @@ module TwoProd {
     float b1h = b1.rh
     float b1l = b1.rl
 
-    dspfp32_mac x1
-    x1.b = a1h
-    x1.d = b1h
-    x1.c = rh
-    float tmp0 = x1.res
+    // res.l = ((a1.h * b1.h - res.h) + a1.h * b1.l + a1.l * b1.h) + a1.l * b1.l;
 
-    dspfp32_mac x2
-    x2.b = a1h
-    x2.d = b1l
-    x2.c = tmp0
-    float tmp1 = x2.res
+    // tmp0 = a1h * b1h - rh
+    dspfp32_full#(A_REGS: 0, B_REGS: 0, C_REGS: 2, D_REGS: 0, M_REGS: 2, OP_REGS: 0, ACIN: 0, PCOUT_FPA: 1) dsp1
+    dsp1.apply(a1h, b1h, rh2, 0.0, 0.0, 0.0, SUB_M_C)
+    float _t3   = dsp1.fpm_out
+    float _t4   = dsp1.fpa_out
+    float tmp0 = dsp1.pcout
+    float _t5   = dsp1.acout
 
-    dspfp32_mac x3
-    x3.c = a1l
-    x3.d = b1h
-    x3.c = tmp1
-    float tmp2 = x3.res
+    // tmp1 = a1h * b1l + tmp0
+    dspfp32_full#(A_REGS: 1, B_REGS: 0, C_REGS: 0, D_REGS: 0, M_REGS: 2, OP_REGS: 0, ACIN: 0, PCOUT_FPA: 1) dsp2
+    dsp2.apply(a1h, b1l, 0.0, 0.0, 0.0, tmp0, ADD_M_PCIN0)
+    float _t6   = dsp2.fpm_out
+    float _t7   = dsp2.fpa_out
+    float tmp1 = dsp2.pcout
+    float _t8   = dsp2.acout
 
-    dspfp32_mac x4
-    x4.b = a1h
-    x4.d = b1l
-    x4.c = tmp2
-    rl = x4.res
+    // tmp2 = a1l * b1h + tmp1
+    dspfp32_full_b#(A_REGS: 2, B_REGS: 1, C_REGS: 0, D_REGS: 0, M_REGS: 2, OP_REGS: 0, BCIN: 0, PCOUT_FPA: 1) dsp3
+    dsp3.apply(b1h, a1l, 0.0, 0.0, 0.0, 0.0, tmp1, ADD_M_PCIN1)
+    float _t9   = dsp3.fpm_out
+    float _t10  = dsp3.fpa_out
+    float _t11  = dsp3.acout
+    float a1lc = dsp3.bcout
+    float tmp2 = dsp3.pcout
+
+    // tmp3 = a1l * b1l + tmp2
+    dspfp32_full_b#(A_REGS: 2, B_REGS: 1, C_REGS: 0, D_REGS: 0, M_REGS: 2, OP_REGS: 0, BCIN: 1, PCOUT_FPA: 1) dsp4
+    dsp4.apply(b1l, 0.0, 0.0, 0.0, 0.0, a1lc, tmp2, ADD_M_PCIN2)
+    float _t12  = dsp4.fpm_out
+    float rl2   = dsp4.fpa_out
+    float _t13  = dsp4.pcout
+    float _t14  = dsp4.acout
+
+    rh = rh2
+    rl = rl2
 
     /*
     two<T> res;
@@ -650,9 +671,6 @@ module TwoProd {
     res.l = ((a1.h * b1.h - res.h) + a1.h * b1.l + a1.l * b1.h) + a1.l * b1.l;
     return res;
     */
-
-    rh = a
-    rl = b
 }
 
 module Split {
@@ -673,22 +691,35 @@ module Split {
     output float rh
     output float rl
 
-    dspfp32_mac dsp0
-    dsp0.b = FromBits(ToBits(SplitC2))
-    dsp0.d = x
-    dsp0.c = x
-    float p = dsp0.res//dsp0.fmp_out
-    float q = dsp0.res//dsp0.fma_out
+    bool[7] ADD_C_PCIN = 7'b00_110_10
+    bool[7] SUB_M_PCIN = 7'b10_111_01
+    bool[7] SUB_C_M    = 7'b01_110_01
 
-    dspfp32_add#(D_LATENCY: 0, C_LATENCY: 0) dsp1
-    dsp1.d = p
-    dsp1.c = q
-    float x1 = dsp1.res
+    // p = x * SplitC
+    // q = x - p
+    // xc = x'+2
+    dspfp32_full#(A_REGS: 0, B_REGS: 0, C_REGS: 2, D_REGS: 0, M_REGS: 2, OP_REGS: 0, ACIN: 0, PCOUT_FPA: 1) dsp0
+    dsp0.apply(x, FromBits(ToBits(SplitC2)), x, 0.0, 0.0, 0.0, SUB_C_M)
+    float p  = dsp0.fpm_out
+    float _t0 = dsp0.fpa_out
+    float q  = dsp0.pcout
+    float xc = dsp0.acout
 
-    dspfp32_c_sub_d#(D_LATENCY: 0, C_LATENCY: 0) dsp2
-    dsp2.d = x1
-    dsp2.c = x
-    float x2 = dsp2.res
+    // x1 = pcin(dsp0.p) + c(dsp0.q)
+    dspfp32_full#(A_REGS: 2, B_REGS: 0, C_REGS: 1, D_REGS: 0, M_REGS: 0, OP_REGS: 0, ACIN: 1, PCOUT_FPA: 1) dsp1
+    dsp1.apply(0.0, 0.0, p, 0.0, xc, q, ADD_C_PCIN)
+    float _t1  = dsp1.fpm_out
+    float x1  = dsp1.fpa_out
+    float x1c = dsp1.pcout
+    float xcc  = dsp1.acout
+
+    // x2 = acin(xc)*1.0 - pcin(x1)
+    dspfp32_full#(A_REGS: 0, B_REGS: 0, C_REGS: 0, D_REGS: 0, M_REGS: 2, OP_REGS: 0, ACIN: 1, PCOUT_FPA: 1) dsp2
+    dsp2.apply(0.0, 1.0, 0.0, 0.0, xcc, x1c, SUB_M_PCIN)
+    float _t4  = dsp2.fpm_out
+    float x2  = dsp2.fpa_out
+    float _t5 = dsp2.pcout
+    float _t6  = dsp2.acout
 
     rh = x1
     rl = x2
@@ -710,6 +741,10 @@ module Split {
 extern module dspfp32_add_ip #(int D_LATENCY, int C_LATENCY, int FPOP_LATENCY) {
     clock aclk
 
+    assert#(C: 0 <= D_LATENCY & D_LATENCY <= 1)
+    assert#(C: 0 <= C_LATENCY & C_LATENCY <= 3)
+    assert#(C: 0 <= FPOP_LATENCY & FPOP_LATENCY <= 3)
+
     input float d'-D_LATENCY
     input float c'-C_LATENCY
     input float pcin'0
@@ -718,28 +753,45 @@ extern module dspfp32_add_ip #(int D_LATENCY, int C_LATENCY, int FPOP_LATENCY) {
     output float pcout'1
 }
 
+module dspfp32_delay#(int DELAY) {
+    clock aclk
+
+    interface dspfp32_delay: float x'-(DELAY-1) -> float y'1 {
+        y = x
+        /*if DELAY <= 4 {
+            dspfp32_add_c_d#(D_REGS: 0, C_REGS: DELAY-1) dsp0
+            dsp0.apply(x, 0.0)
+            float _t0 = dsp0.pcout
+            y = dsp0.fpa_out
+        } else {
+            dspfp32_mac_a_b_c#(A_REGS: 2, B_REGS: 0, C_REGS: 0) dsp0
+            dsp0.apply(x, 1.0, 0.0)
+            float _t1 = dsp0.pcout
+            float _t2 = dsp0.fpm_out
+            y = dsp0.fpa_out
+        }*/
+    }
+
+}
+
 module dspfp32_add #(int D_LATENCY, int C_LATENCY) {
     clock aclk
 
-    assert#(C: C_LATENCY <= 5)
+    assert#(C: C_LATENCY <= 3)
     
     input float d'-D_LATENCY
     input float c'-C_LATENCY
     output float res
 
-    if (C_LATENCY <= 3) {
-        dspfp32_add_ip#(D_LATENCY, C_LATENCY, FPOP_LATENCY: 0) ip
-        ip.d = d
-        ip.c = c
-        ip.pcin = 0.0
-        //               ++ +C  +D
-        ip.fpopmode = 7'b00_110_11
+    dspfp32_add_ip#(D_LATENCY, C_LATENCY, FPOP_LATENCY: 0) ip
+    ip.d = d
+    ip.c = c
+    ip.pcin = 0.0
+    //               ++ +C  +D
+    ip.fpopmode = 7'b00_110_11
 
-        float _0 = ip.pcout // Tie off
-        res = ip.fpa_out
-    } else if (C_LATENCY <= 5) {
-        // mul
-    }
+    float _t0 = ip.pcout // Tie off
+    res = ip.fpa_out
 
 }
 
@@ -757,7 +809,7 @@ module dspfp32_c_sub_d #(int D_LATENCY, int C_LATENCY) {
     //               +- +C  -D
     ip.fpopmode = 7'b01_110_11
 
-    float _0 = ip.pcout // Tie off
+    float _t0 = ip.pcout // Tie off
     res = ip.fpa_out
 
 }
@@ -776,93 +828,188 @@ module dspfp32_d_sub_c #(int D_LATENCY, int C_LATENCY) {
     //               -+ -C  +D
     ip.fpopmode = 7'b10_110_11
 
-    float _0 = ip.pcout // Tie off
+    float _t0 = ip.pcout // Tie off
     res = ip.fpa_out
 
 }
 
-module dspfp32_mul {
+module dspfp32_add_c_d#(int C_REGS, int D_REGS) {
     clock aclk
 
-    input float d'0
-    input float c'0
-    output float res
-
-    dspfp32_add_ip#(D_LATENCY: 0, C_LATENCY: 0, FPOP_LATENCY: 0) ip
-    ip.d = d
-    ip.c = c
-    ip.pcin = 0.0
-    //               -+ -C  +D
-    ip.fpopmode = 7'b10_110_11
-
-    float _0 = ip.pcout // Tie off
-    res = ip.fpa_out
-
-}
-
-module dspfp32_mac {
-    clock aclk
-    
-    input float d'0
-    input float c'0
-    input float b'0
-    output float res
-
-    dspfp32_add_ip#(D_LATENCY: 0, C_LATENCY: 0, FPOP_LATENCY: 0) ip
-
-    action dspfp32_mac: float a, float ab -> float resa {
-        resa = a
-        res = ab
-    }
-
-    ip.d = d
-    ip.c = c
-    ip.pcin = 0.0
-    //               -+ -C  +D
-    ip.fpopmode = 7'b10_110_11
-
-    float _0 = ip.pcout // Tie off
-    res = ip.fpa_out
-
-}
-/*
-extern module dspfp32_ip #(int D_LATENCY, int C_LATENCY) {
-    clock aclk
-
-    input float d'-D_LATENCY
-    input float c'-C_LATENCY
-    input float pcin'0
-    input bool[7] fpopmode'0
     output float fpa_out'1
     output float pcout'1
+
+    dspfp32_full_ip#(A_REGS: 0, B_REGS: 0, C_REGS: C_REGS, D_REGS: D_REGS, M_REGS: 0, OP_REGS: 0, ACIN: 0, BCIN: 0, PCOUT_FPA: 1) ip
+
+    interface apply: float c'-C_REGS, float d'-D_REGS {
+        ip.a = 0.0
+        ip.b = 0.0
+        ip.c = c
+        ip.d = d
+        ip.pcin = 0.0
+        //               ++ +C  +D
+        ip.fpopmode = 7'b00_110_11
+    }
+    
+    fpa_out = ip.fpa_out
+    pcout = ip.pcout
+
 }
 
-module dspfp32 #(int D_LATENCY, int C_LATENCY) {
+
+module dspfp32_mul_a_b#(int A_REGS, int B_REGS) {
     clock aclk
 
-    dspfp32_ip dsp
+    output float fpm_out'0
+    output float pcout'0
 
-    action add: float a'D_LATENCY, float b'C_LATENCY -> float res'1 {
-        dsp.d = a
-        dsp.c = b
-        dsp.pcin = 0.0
-        //               ++ +C  +D
-        dsp.fpopmode = 7'b00_110_11
+    dspfp32_full_ip#(A_REGS: A_REGS, B_REGS: B_REGS, C_REGS: 0, D_REGS: 0, M_REGS: 2, OP_REGS: 0, ACIN: 0, BCIN: 0, PCOUT_FPA: 0) ip
 
-        float _0 = dsp.pcout // Tie off
-        res = dsp.fpa_out
+    interface apply: float a'-(A_REGS+2), float b'-(B_REGS+2) {
+        ip.a = a
+        ip.b = b
+        ip.c = 0.0
+        ip.pcin = 0.0
+        ip.fpopmode = 7'b00_000_00
     }
-
-    action sub: float sub_a'D_LATENCY, float sub_b'C_LATENCY -> float sub_res'1 {
-        dsp.d = sub_a
-        dsp.c = sub_b
-        dsp.pcin = 0.0
-        //               -+ -C  +D
-        dsp.fpopmode = 7'b00_110_11
-
-        float _0 = dsp.pcout // Tie off
-        sub_res = dsp.fpa_out
-    }
+    
+    fpm_out = ip.fpm_out
+    pcout = ip.pcout
 
 }
-*/
+
+module dspfp32_mac_a_b_pcin#(int A_REGS, int B_REGS) {
+    clock aclk
+
+    output float fpm_out'0
+    output float fpa_out'1
+    output float pcout'1
+
+    dspfp32_full_ip#(A_REGS: A_REGS, B_REGS: B_REGS, C_REGS: 0, D_REGS: 0, M_REGS: 2, OP_REGS: 0, ACIN: 0, BCIN: 0, PCOUT_FPA: 1) ip
+
+    interface apply: float a'-(A_REGS+2), float b'-(B_REGS+2), float pcin'0 {
+        ip.a = a
+        ip.b = b
+        ip.c = 0.0
+        ip.d = 0.0
+        ip.pcin = pcin
+        //               ++ +PCIN +M
+        ip.fpopmode = 7'b00_111_01
+    }
+    
+    fpm_out = ip.fpm_out
+    fpa_out = ip.fpa_out
+    pcout = ip.pcout
+
+}
+
+module dspfp32_mac_a_b_c#(int A_REGS, int B_REGS, int C_REGS) {
+    clock aclk
+
+    output float fpm_out'0
+    output float fpa_out'1
+    output float pcout'1
+
+    dspfp32_full_ip#(A_REGS: A_REGS, B_REGS: B_REGS, C_REGS: C_REGS, D_REGS: 0, M_REGS: 2, OP_REGS: 0, ACIN: 0, BCIN: 0, PCOUT_FPA: 1) ip
+
+    interface apply: float a'-(A_REGS+2), float b'-(B_REGS+2), float c'C_REGS {
+        ip.a = a
+        ip.b = b
+        ip.c = c
+        ip.d = 0.0
+        ip.pcin = 0.0
+        //               ++ +C  +M
+        ip.fpopmode = 7'b00_110_01
+    }
+    
+    fpm_out = ip.fpm_out
+    fpa_out = ip.fpa_out
+    pcout = ip.pcout
+}
+
+extern module dspfp32_full_ip #(int A_REGS, int B_REGS, int C_REGS, int D_REGS, int M_REGS, int OP_REGS, int ACIN, int BCIN, int PCOUT_FPA) {
+    clock aclk
+    
+    assert#(C: 0 <= A_REGS & A_REGS <= 2)
+    assert#(C: 0 <= B_REGS & B_REGS <= 1)
+    assert#(C: 0 <= C_REGS & C_REGS <= 3)
+    assert#(C: 0 <= D_REGS & D_REGS <= 1)
+    assert#(C: 0 <= M_REGS & M_REGS <= 2)
+    assert#(C: 0 <= OP_REGS & OP_REGS <= 3)
+    assert#(C: 0 <= PCOUT_FPA & PCOUT_FPA <= 1)
+
+    input float a'-(A_REGS+M_REGS)
+    input float b'-(B_REGS+M_REGS)
+    input float c'-C_REGS
+    input float d'-D_REGS
+    input float acin'-(A_REGS+M_REGS)
+    input float bcin'-(B_REGS+M_REGS)
+    input float pcin'0
+    input bool[7] fpopmode'-OP_REGS
+    output float fpm_out'0
+    output float fpa_out'1
+    output float acout'-(A_REGS+M_REGS-1)
+    output float bcout'-M_REGS
+    output float pcout'PCOUT_FPA
+}
+
+module dspfp32_full #(int A_REGS, int B_REGS, int C_REGS, int D_REGS, int M_REGS, int OP_REGS, int ACIN, int PCOUT_FPA) {
+    clock aclk
+
+    output float fpm_out'0
+    output float fpa_out'1
+    output float acout'-(A_REGS+M_REGS-1)
+    output float pcout'PCOUT_FPA
+
+    dspfp32_full_ip#(A_REGS, B_REGS, C_REGS, D_REGS, M_REGS, OP_REGS, ACIN: ACIN, BCIN: 0, PCOUT_FPA) ip
+
+    interface apply: float a'-(A_REGS+M_REGS), float b'-(B_REGS+M_REGS), float c'-C_REGS, float d'-D_REGS,
+                     float acin'-(A_REGS+M_REGS), float pcin'0, bool[7] fpopmode'-OP_REGS {
+        ip.a = a
+        ip.b = b
+        ip.c = c
+        ip.d = d
+        ip.acin = acin
+        ip.bcin = 0.0
+        ip.pcin = pcin
+        ip.fpopmode = fpopmode
+    }
+
+    fpm_out = ip.fpm_out
+    fpa_out = ip.fpa_out
+    acout = ip.acout
+    float _bcout = ip.bcout
+    pcout = ip.pcout
+
+}
+
+module dspfp32_full_b #(int A_REGS, int B_REGS, int C_REGS, int D_REGS, int M_REGS, int OP_REGS, int BCIN, int PCOUT_FPA) {
+    clock aclk
+
+    output float fpm_out'0
+    output float fpa_out'1
+    output float acout'-(A_REGS+M_REGS-1)
+    output float bcout'-M_REGS
+    output float pcout'PCOUT_FPA
+
+    dspfp32_full_ip#(A_REGS, B_REGS, C_REGS, D_REGS, M_REGS, OP_REGS, ACIN: 0, BCIN: BCIN, PCOUT_FPA) ip
+
+    interface apply: float a'-(A_REGS+M_REGS), float b'-(B_REGS+M_REGS), float c'-C_REGS, float d'-D_REGS,
+                     float acin'-(A_REGS+M_REGS), float bcin'-(B_REGS+M_REGS), float pcin'0, bool[7] fpopmode'-OP_REGS {
+        ip.a = a
+        ip.b = b
+        ip.c = c
+        ip.d = d
+        ip.acin = acin
+        ip.bcin = bcin
+        ip.pcin = pcin
+        ip.fpopmode = fpopmode
+    }
+
+    fpm_out = ip.fpm_out
+    fpa_out = ip.fpa_out
+    pcout = ip.pcout
+    bcout = ip.bcout
+    acout = ip.acout
+
+}
