@@ -1,0 +1,868 @@
+
+module SUS_DWPlusDW_Accurate {
+    clock aclk
+
+    gen int TYPE = 3
+
+    output bool                               saxis_a_tready'0 = true
+    input  bool                               saxis_a_tvalid'0
+    input  bool[128]                          saxis_a_tdata'0
+    input  bool[16]                           saxis_a_tkeep'0
+    input  bool                               saxis_a_tlast'0
+
+    output bool                               saxis_b_tready'0 = true
+    input  bool                               saxis_b_tvalid'0
+    input  bool[128]                          saxis_b_tdata'0
+    input  bool[16]                           saxis_b_tkeep'0
+    input  bool                               saxis_b_tlast'0
+
+    input  bool                               maxis_tready'0
+    output bool                               maxis_tvalid'0 = true
+    output bool[128]                          maxis_tdata
+    output bool[16]                           maxis_tkeep'0 = FromBits(16'b0)
+    output bool                               maxis_tlast'0 = false
+
+    bool      _saxis_a_tvalid = saxis_a_tvalid
+    bool[16]  _saxis_a_tkeep  = saxis_a_tkeep
+    bool      _saxis_a_tlast  = saxis_a_tlast
+    bool      _saxis_b_tvalid = saxis_b_tvalid
+    bool[16]  _saxis_b_tkeep  = saxis_b_tkeep
+    bool      _saxis_b_tlast  = saxis_b_tlast
+    bool      _maxis_tready   = maxis_tready
+
+    if TYPE == 0 {
+        FPPlusFP inst
+        inst.x = FromBits(saxis_a_tdata[0+:32])
+        inst.y = FromBits(saxis_b_tdata[0+:32])
+        maxis_tdata[0+:32]  = ToBits(inst.rh)
+        maxis_tdata[32+:32] = ToBits(inst.rl)
+        maxis_tdata[64+:32] = ToBits(0.0)
+        maxis_tdata[96+:32] = ToBits(0.0)
+    } else if TYPE == 1 {
+        DWPlusFP inst
+        inst.xh = FromBits(saxis_a_tdata[0+:32])
+        inst.xl = FromBits(saxis_a_tdata[32+:32])
+        inst.y = FromBits(saxis_b_tdata[0+:32])
+        maxis_tdata[0+:32]  = ToBits(inst.rh)
+        maxis_tdata[32+:32] = ToBits(inst.rl)
+        maxis_tdata[64+:32] = ToBits(0.0)
+        maxis_tdata[96+:32] = ToBits(0.0)
+    } else if TYPE == 2 {
+        DWPlusDW_Sloppy inst
+        inst.xh = FromBits(saxis_a_tdata[0+:32])
+        inst.xl = FromBits(saxis_a_tdata[32+:32])
+        inst.yh = FromBits(saxis_b_tdata[0+:32])
+        inst.yl = FromBits(saxis_b_tdata[32+:32])
+        maxis_tdata[0+:32]  = ToBits(inst.rh)
+        maxis_tdata[32+:32] = ToBits(inst.rl)
+        maxis_tdata[64+:32] = ToBits(0.0)
+        maxis_tdata[96+:32] = ToBits(0.0)
+    } else if TYPE == 3 {
+        DWPlusDW_Accurate inst
+        inst.xh = FromBits(saxis_a_tdata[0+:32])
+        inst.xl = FromBits(saxis_a_tdata[32+:32])
+        inst.yh = FromBits(saxis_b_tdata[0+:32])
+        inst.yl = FromBits(saxis_b_tdata[32+:32])
+        maxis_tdata[0+:32]  = ToBits(inst.rh)
+        maxis_tdata[32+:32] = ToBits(inst.rl)
+        maxis_tdata[64+:32] = ToBits(0.0)
+        maxis_tdata[96+:32] = ToBits(0.0)
+    } else if TYPE == 4 {
+        FPTimesFP inst
+        inst.x = FromBits(saxis_a_tdata[0+:32])
+        inst.y = FromBits(saxis_b_tdata[0+:32])
+        maxis_tdata[0+:32]  = ToBits(inst.rh)
+        maxis_tdata[32+:32] = ToBits(inst.rl)
+        maxis_tdata[64+:32] = ToBits(0.0)
+        maxis_tdata[96+:32] = ToBits(0.0)
+    } else if TYPE == 5 {
+        DWTimesFP_Fast inst
+        inst.xh = FromBits(saxis_a_tdata[0+:32])
+        inst.xl = FromBits(saxis_a_tdata[32+:32])
+        inst.y = FromBits(saxis_b_tdata[0+:32])
+        maxis_tdata[0+:32]  = ToBits(inst.rh)
+        maxis_tdata[32+:32] = ToBits(inst.rl)
+        maxis_tdata[64+:32] = ToBits(0.0)
+        maxis_tdata[96+:32] = ToBits(0.0)
+    } else if TYPE == 6 {
+        DWTimesFP_Accurate inst
+        inst.xh = FromBits(saxis_a_tdata[0+:32])
+        inst.xl = FromBits(saxis_a_tdata[32+:32])
+        inst.y = FromBits(saxis_b_tdata[0+:32])
+        maxis_tdata[0+:32]  = ToBits(inst.rh)
+        maxis_tdata[32+:32] = ToBits(inst.rl)
+        maxis_tdata[64+:32] = ToBits(0.0)
+        maxis_tdata[96+:32] = ToBits(0.0)
+    } else if TYPE == 7 {
+        DWTimesDW_Fast inst
+        inst.xh = FromBits(saxis_a_tdata[0+:32])
+        inst.xl = FromBits(saxis_a_tdata[32+:32])
+        inst.yh = FromBits(saxis_b_tdata[0+:32])
+        inst.yl = FromBits(saxis_b_tdata[32+:32])
+        maxis_tdata[0+:32]  = ToBits(inst.rh)
+        maxis_tdata[32+:32] = ToBits(inst.rl)
+        maxis_tdata[64+:32] = ToBits(0.0)
+        maxis_tdata[96+:32] = ToBits(0.0)
+    }
+
+}
+
+// ################################################################
+// ##  Algorithms  ################################################
+// ################################################################
+
+module FPPlusFP {
+    clock aclk
+
+    input float x'0
+    input float y'0
+
+    output float rh
+    output float rl
+
+    TwoSum2 r
+    r.a = x
+    r.b = y
+
+    rh = r.rh
+    rl = r.rl
+}
+
+module DWPlusFP {
+    clock aclk
+
+    input float xh'0
+    input float xl'0
+    input float y'0
+
+    output float rh
+    output float rl
+
+    TwoSum2 s
+    s.a = xh
+    s.b = y
+    float sh = s.rh
+    float sl = s.rl
+
+    dspfp32_add#(D_LATENCY: 0, C_LATENCY: 3) x0
+    x0.d = sl
+    x0.c = xl
+    float v = x0.res
+
+    FastTwoSum#(A_LATENCY: 2) r
+    r.a = sh
+    r.b = v
+
+    /*
+    two<T> s = algorithms::TwoSum(x.h, y);
+    T v = x.l + s.l;
+    return algorithms::FastTwoSum(s.h, v);
+    */
+
+    rh = r.rh
+    rl = r.rl
+}
+
+module DWPlusDW_Sloppy {
+    clock aclk
+
+    input float xh'0
+    input float xl'0
+    input float yh'0
+    input float yl'0
+
+    output float rh
+    output float rl
+
+    TwoSum2 s
+    s.a = xh
+    s.b = yh
+    float sh = s.rh
+    float sl = s.rl
+
+    dspfp32_add#(D_LATENCY: 0, C_LATENCY: 0) x0
+    x0.d = xl
+    x0.c = yl
+    float v = x0.res
+
+    dspfp32_add#(D_LATENCY: 0, C_LATENCY: 2) x1
+    x1.d = sl
+    x1.c = v
+    float w = x1.res
+
+    FastTwoSum#(A_LATENCY: 2) r
+    r.a = sh
+    r.b = w
+
+    /*
+    two<T> s = algorithms::TwoSum(x.h, y.h);
+    T v = x.l + y.l;
+    T w = s.l + v;
+    return algorithms::FastTwoSum(s.h, w);
+    */
+
+    rh = r.rh
+    rl = r.rl
+}
+
+module DWPlusDW_Accurate {
+    clock aclk
+
+    input float xh'0
+    input float xl'0
+    input float yh'0
+    input float yl'0
+
+    output float rh
+    output float rl
+
+    TwoSum2 s
+    s.a = xh
+    s.b = yh
+    float sh = s.rh
+    float sl = s.rl
+    float sh_c = s.rh_c
+    float sl_c = s.rl_c
+
+    TwoSum2 t
+    t.a = xl
+    t.b = yl
+    float th = t.rh
+    float tl = t.rl
+    float th_c = t.rh_c
+    float tl_c = t.rl_c
+
+    //dspfp32_add#(D_LATENCY: 0, C_LATENCY: 3) x0
+    dspfp32_add#(D_LATENCY: 0, C_LATENCY: 2) x0
+    x0.d = sl
+    x0.c = th
+    float c = x0.res
+
+    FastTwoSum#(A_LATENCY: 2) v
+    v.a = sh
+    v.b = c
+    float vh = v.rh
+    float vl = v.rl
+
+    dspfp32_add#(D_LATENCY: 0, C_LATENCY: 3) x1
+    x1.d = vl
+    x1.c = tl
+    float w = x1.res
+
+    FastTwoSum#(A_LATENCY: 2) r
+    r.a = vh
+    r.b = w
+
+    /*
+    two<T> s = algorithms::TwoSum(x.h, y.h);
+    two<T> t = algorithms::TwoSum(x.l, y.l);
+    T c = s.l + t.h;
+    two<T> v = algorithms::FastTwoSum(s.h, c);
+    T w = t.l + v.l;
+    return algorithms::FastTwoSum(v.h, w);
+    */
+
+    rh = r.rh
+    rl = r.rl
+}
+
+module FPTimesFP {
+    clock aclk
+
+    input float x'0
+    input float y'0
+
+    output float rh
+    output float rl
+
+    TwoProd r
+    r.a = x
+    r.b = y
+
+    rh = r.rh
+    rl = r.rl
+}
+
+module DWTimesFP_Fast {
+    clock aclk
+
+    input float xh'0
+    input float xl'0
+    input float y'0
+
+    output float rh
+    output float rl
+
+    TwoProd c
+    c.a = xh
+    c.b = y
+
+    dspfp32_add#(D_LATENCY: 0, C_LATENCY: 0) x1 // mul
+    x1.d = xl
+    x1.c = y
+    float cl2 = x1.res
+
+    dspfp32_add#(D_LATENCY: 0, C_LATENCY: 0) x2 // mul
+    x2.d = c.rl
+    x2.c = cl2
+    float cl3 = x2.res
+
+    FastTwoSum#(A_LATENCY: 0) r
+    r.a = c.rh
+    r.b = cl3
+
+    rh = r.rh
+    rl = r.rl
+
+    /*
+    two<T> c = algorithms::TwoProd(x.h, y);
+    T cl2 = x.l * y;
+    T cl3 = c.l + cl2;
+    return algorithms::FastTwoSum(c.h, cl3);
+    */
+
+    rh = y
+    rl = y
+}
+
+module DWTimesFP_Accurate {
+    clock aclk
+
+    input float xh'0
+    input float xl'0
+    input float y'0
+
+    output float rh
+    output float rl
+
+    TwoProd c
+    c.a = xh
+    c.b = y
+
+    dspfp32_add#(D_LATENCY: 0, C_LATENCY: 0) x1 // mul
+    x1.d = xl
+    x1.c = y
+    float cl2 = x1.res
+
+    FastTwoSum#(A_LATENCY: 0) t
+    t.a = c.rh
+    t.b = cl2
+
+    dspfp32_add#(D_LATENCY: 0, C_LATENCY: 0) x2
+    x2.d = t.rl
+    x2.c = c.rl
+    float tl2 = x2.res
+
+    FastTwoSum#(A_LATENCY: 0) r
+    r.a = t.rh
+    r.b = tl2
+
+    rh = r.rh
+    rl = r.rl
+
+    /*
+    two<T> c = algorithms::TwoProd(x.h, y);
+    T cl2 = x.l * y;
+    two<T> t = algorithms::FastTwoSum(c.h, cl2);
+    T tl2 = t.l + c.l;
+    return algorithms::FastTwoSum(t.h, tl2);
+    */
+
+    rh = y
+    rl = y
+}
+
+module DWTimesDW_Fast {
+    clock aclk
+
+    input float xh'0
+    input float xl'0
+    input float yh'0
+    input float yl'0
+
+    output float rh
+    output float rl
+
+    TwoProd c
+    c.a = xh
+    c.b = yh
+
+    dspfp32_add#(D_LATENCY: 0, C_LATENCY: 0) x1 // mul
+    x1.d = xh
+    x1.c = yl
+    float tl1 = x1.res
+
+    dspfp32_add#(D_LATENCY: 0, C_LATENCY: 0) x2 // mul
+    x2.d = xl
+    x2.c = yh
+    float tl2 = x2.res
+
+    dspfp32_add#(D_LATENCY: 0, C_LATENCY: 0) x3
+    x3.d = tl1
+    x3.c = tl2
+    float cl2 = x3.res
+
+    dspfp32_add#(D_LATENCY: 0, C_LATENCY: 0) x4
+    x4.d = c.rl
+    x4.c = cl2
+    float cl3 = x4.res
+
+    FastTwoSum#(A_LATENCY: 0) r
+    r.a = c.rh
+    r.b = cl3
+
+    rh = r.rh
+    rl = r.rl
+
+    /*
+    two<T> c = algorithms::TwoProd(x.h, y.h);
+    T tl1 = x.h * y.l;
+    T tl2 = x.l * y.h;
+    T cl2 = tl1 + tl2;
+    T cl3 = c.l + cl2;
+    return algorithms::FastTwoSum(c.h, cl3);
+    */
+
+}
+
+// ################################################################
+// ##  Building Blocks  ###########################################
+// ################################################################
+
+module TwoSum {
+    clock aclk
+
+    input float a'0
+    input float b'0
+
+    output float rh
+    output float rl
+
+    dspfp32_add#(D_LATENCY: 0, C_LATENCY: 0) x0
+    dspfp32_d_sub_c#(D_LATENCY: 0, C_LATENCY: 1) x1
+    dspfp32_c_sub_d#(D_LATENCY: 0, C_LATENCY: 1) x2
+    dspfp32_c_sub_d#(D_LATENCY: 0, C_LATENCY: 2) x3
+    dspfp32_c_sub_d#(D_LATENCY: 0, C_LATENCY: 3) x4
+    dspfp32_add#(D_LATENCY: 0, C_LATENCY: 1) x5
+
+    x0.d = a
+    x0.c = b
+    float _rh = x0.res
+    rh = x0.res
+    x1.d = rh
+    x1.c = b
+    float a1 = x1.res
+    x2.d = a1
+    x2.c = rh
+    float b1 = x2.res
+    x3.d = a1
+    x3.c = a
+    float da = x3.res
+    x4.d = b1
+    x4.c = b
+    float db = x4.res
+    x5.d = db
+    x5.c = da
+    float _rl = x5.res
+    rl = x5.res
+
+    /*
+    two<T> res;
+    res.h = a + b;
+    T a1 = res.h - b;
+    T b1 = res.h - a1;
+    T da = a - a1;
+    T db = b - b1;
+    res.l = da + db;
+    return res;
+    */
+
+}
+
+module TwoSum2 {
+    clock aclk
+
+    input float a'0
+    input float b'0
+
+    output float rh
+    output float rl
+    output float rh_c
+    output float rl_c
+
+    bool[32] a_bits = ToBits(a)
+    int#(FROM: 0, TO: 1 << 8) a_exp = BitsToUInt(a_bits[23+:8])
+    bool[32] b_bits = ToBits(b)
+    int#(FROM: 0, TO: 1 << 8) b_exp = BitsToUInt(b_bits[23+:8])
+
+    bool sel = a_exp >= b_exp
+
+    //                      ++ +C  +D
+    bool[7] C_PLUS_D   = 7'b00_110_11
+    //                      -+ -C  +PC
+    bool[7] PC_MINUS_C = 7'b10_110_10
+    //                      +- +PC -D
+    bool[7] PC_MINUS_D = 7'b01_111_11
+
+    // rh     = a + b
+    // pcout0 = rh
+    dspfp32_add_ip#(D_LATENCY: 0, C_LATENCY: 0, FPOP_LATENCY: 0) x0
+    x0.d = b
+    x0.c = a
+    x0.pcin = 0.0
+    x0.fpopmode = C_PLUS_D
+    float pcout0 = x0.pcout
+    rh = x0.fpa_out
+    rh_c = x0.pcout
+
+    // z      = pcout0 - (sel ? a : b)
+    // pcout1 = z
+    dspfp32_add_ip#(D_LATENCY: 1, C_LATENCY: 1, FPOP_LATENCY: 1) x1
+    x1.d = b
+    x1.c = a
+    x1.pcin = pcout0
+    float _fpa_out1 = x1.fpa_out
+    when (sel) {
+        x1.fpopmode = PC_MINUS_C
+    } else {
+        x1.fpopmode = PC_MINUS_D
+    }
+    float pcout1 = x1.pcout
+
+    // rl = (sel ? b : a) - pcout1
+    dspfp32_add_ip#(D_LATENCY: 1, C_LATENCY: 2, FPOP_LATENCY: 2) x2
+    x2.d = b
+    x2.c = a
+    x2.pcin = pcout1
+    float _pccout2 = x2.pcout
+    when (sel) {
+        x2.fpopmode = PC_MINUS_C
+    } else {
+        x2.fpopmode = PC_MINUS_D
+    }
+    rl = x2.fpa_out
+    rl_c = x2.pcout
+
+    /*
+    two<T> res;
+    bool sel = a_exp > b_exp;
+    res.h = a + b;
+    T z = res.h - (sel ? a : b);
+    res.l = (sel ? b : a) - z;
+    return res;
+    */
+
+}
+
+module FastTwoSum#(int A_LATENCY) {
+    clock aclk
+
+    input float a'-A_LATENCY
+    input float b'0
+
+    output float rh
+    output float rl
+
+    dspfp32_add#(D_LATENCY: 0, C_LATENCY: A_LATENCY) x0
+    dspfp32_d_sub_c#(D_LATENCY: 0, C_LATENCY: 1+A_LATENCY) x1
+    dspfp32_c_sub_d#(D_LATENCY: 0, C_LATENCY: 2) x2
+
+    x0.d = b
+    x0.c = a
+    rh = x0.res
+    x1.d = rh
+    x1.c = a
+    float z = x1.res
+    x2.d = z
+    x2.c = b
+    rl = x2.res
+
+    action rh_c: -> float out {
+        out = x2.res
+    }
+
+    /*
+        two<T> res;
+        res.h = a + b;
+        T z = res.h - a;
+        res.l = b - z;
+        return res;
+    */
+
+}
+
+module TwoProd {
+    clock aclk
+
+    input float a'0
+    input float b'0
+
+    output float rh
+    output float rl
+
+    dspfp32_mul x0
+    x0.c = a
+    x0.d = b
+    rh = x0.res
+
+    Split a1
+    a1.x = a
+    float a1h = a1.rh
+    float a1l = a1.rl
+
+    Split b1
+    b1.x = b
+    float b1h = b1.rh
+    float b1l = b1.rl
+
+    dspfp32_mac x1
+    x1.b = a1h
+    x1.d = b1h
+    x1.c = rh
+    float tmp0 = x1.res
+
+    dspfp32_mac x2
+    x2.b = a1h
+    x2.d = b1l
+    x2.c = tmp0
+    float tmp1 = x2.res
+
+    dspfp32_mac x3
+    x3.c = a1l
+    x3.d = b1h
+    x3.c = tmp1
+    float tmp2 = x3.res
+
+    dspfp32_mac x4
+    x4.b = a1h
+    x4.d = b1l
+    x4.c = tmp2
+    rl = x4.res
+
+    /*
+    two<T> res;
+    res.h = a * b;
+
+    two<T> a1 = Split(a);
+    two<T> b1 = Split(b);
+
+    // Order must be preserved to ensure the proven error bounds
+    res.l = ((a1.h * b1.h - res.h) + a1.h * b1.l + a1.l * b1.h) + a1.l * b1.l;
+    return res;
+    */
+
+    rh = a
+    rl = b
+}
+
+module Split {
+    clock aclk
+
+    // The number of bits in the mantissa of the underlying floating point type.
+    gen int t = 22
+    // The number of bits that x2 fits into when splitting x into x1+x2 in algorithms::Split.
+    // Calculated as t/2. See Boldo 2006 Algorithm 1 and 2 for details.
+    gen int SplitS = t / 2
+    // A constant used to split a floating point number into the sum of two floating point numbers.
+    // Calculated as β^(s) + 1. See Boldo 2006 Algorithm 1 and 2 for explanations.
+    gen int SplitC = pow#(B: 2, E: SplitS) + 1
+    int#(FROM: 0, TO: 1 << 32) SplitC2 = SplitC
+
+    input float x'0
+
+    output float rh
+    output float rl
+
+    dspfp32_mac dsp0
+    dsp0.b = FromBits(ToBits(SplitC2))
+    dsp0.d = x
+    dsp0.c = x
+    float p = dsp0.res//dsp0.fmp_out
+    float q = dsp0.res//dsp0.fma_out
+
+    dspfp32_add#(D_LATENCY: 0, C_LATENCY: 0) dsp1
+    dsp1.d = p
+    dsp1.c = q
+    float x1 = dsp1.res
+
+    dspfp32_c_sub_d#(D_LATENCY: 0, C_LATENCY: 0) dsp2
+    dsp2.d = x1
+    dsp2.c = x
+    float x2 = dsp2.res
+
+    rh = x1
+    rl = x2
+
+    /*
+    T p = x * SplitC;
+    T q = x - p;
+    T x1 = p + q;
+    T x2 = x - x1;
+    return {x1, x2};
+    */
+
+}
+
+// ################################################################
+// ##  Extern  ####################################################
+// ################################################################
+
+extern module dspfp32_add_ip #(int D_LATENCY, int C_LATENCY, int FPOP_LATENCY) {
+    clock aclk
+
+    input float d'-D_LATENCY
+    input float c'-C_LATENCY
+    input float pcin'0
+    input bool[7] fpopmode'-FPOP_LATENCY
+    output float fpa_out'1
+    output float pcout'1
+}
+
+module dspfp32_add #(int D_LATENCY, int C_LATENCY) {
+    clock aclk
+
+    assert#(C: C_LATENCY <= 5)
+    
+    input float d'-D_LATENCY
+    input float c'-C_LATENCY
+    output float res
+
+    if (C_LATENCY <= 3) {
+        dspfp32_add_ip#(D_LATENCY, C_LATENCY, FPOP_LATENCY: 0) ip
+        ip.d = d
+        ip.c = c
+        ip.pcin = 0.0
+        //               ++ +C  +D
+        ip.fpopmode = 7'b00_110_11
+
+        float _0 = ip.pcout // Tie off
+        res = ip.fpa_out
+    } else if (C_LATENCY <= 5) {
+        // mul
+    }
+
+}
+
+module dspfp32_c_sub_d #(int D_LATENCY, int C_LATENCY) {
+    clock aclk
+    
+    input float d'-D_LATENCY
+    input float c'-C_LATENCY
+    output float res
+
+    dspfp32_add_ip#(D_LATENCY, C_LATENCY, FPOP_LATENCY: 0) ip
+    ip.d = d
+    ip.c = c
+    ip.pcin = 0.0
+    //               +- +C  -D
+    ip.fpopmode = 7'b01_110_11
+
+    float _0 = ip.pcout // Tie off
+    res = ip.fpa_out
+
+}
+
+module dspfp32_d_sub_c #(int D_LATENCY, int C_LATENCY) {
+    clock aclk
+    
+    input float d'-D_LATENCY
+    input float c'-C_LATENCY
+    output float res
+
+    dspfp32_add_ip#(D_LATENCY, C_LATENCY, FPOP_LATENCY: 0) ip
+    ip.d = d
+    ip.c = c
+    ip.pcin = 0.0
+    //               -+ -C  +D
+    ip.fpopmode = 7'b10_110_11
+
+    float _0 = ip.pcout // Tie off
+    res = ip.fpa_out
+
+}
+
+module dspfp32_mul {
+    clock aclk
+
+    input float d'0
+    input float c'0
+    output float res
+
+    dspfp32_add_ip#(D_LATENCY: 0, C_LATENCY: 0, FPOP_LATENCY: 0) ip
+    ip.d = d
+    ip.c = c
+    ip.pcin = 0.0
+    //               -+ -C  +D
+    ip.fpopmode = 7'b10_110_11
+
+    float _0 = ip.pcout // Tie off
+    res = ip.fpa_out
+
+}
+
+module dspfp32_mac {
+    clock aclk
+    
+    input float d'0
+    input float c'0
+    input float b'0
+    output float res
+
+    dspfp32_add_ip#(D_LATENCY: 0, C_LATENCY: 0, FPOP_LATENCY: 0) ip
+
+    action dspfp32_mac: float a, float ab -> float resa {
+        resa = a
+        res = ab
+    }
+
+    ip.d = d
+    ip.c = c
+    ip.pcin = 0.0
+    //               -+ -C  +D
+    ip.fpopmode = 7'b10_110_11
+
+    float _0 = ip.pcout // Tie off
+    res = ip.fpa_out
+
+}
+/*
+extern module dspfp32_ip #(int D_LATENCY, int C_LATENCY) {
+    clock aclk
+
+    input float d'-D_LATENCY
+    input float c'-C_LATENCY
+    input float pcin'0
+    input bool[7] fpopmode'0
+    output float fpa_out'1
+    output float pcout'1
+}
+
+module dspfp32 #(int D_LATENCY, int C_LATENCY) {
+    clock aclk
+
+    dspfp32_ip dsp
+
+    action add: float a'D_LATENCY, float b'C_LATENCY -> float res'1 {
+        dsp.d = a
+        dsp.c = b
+        dsp.pcin = 0.0
+        //               ++ +C  +D
+        dsp.fpopmode = 7'b00_110_11
+
+        float _0 = dsp.pcout // Tie off
+        res = dsp.fpa_out
+    }
+
+    action sub: float sub_a'D_LATENCY, float sub_b'C_LATENCY -> float sub_res'1 {
+        dsp.d = sub_a
+        dsp.c = sub_b
+        dsp.pcin = 0.0
+        //               -+ -C  +D
+        dsp.fpopmode = 7'b00_110_11
+
+        float _0 = dsp.pcout // Tie off
+        sub_res = dsp.fpa_out
+    }
+
+}
+*/
