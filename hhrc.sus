@@ -565,13 +565,18 @@ module FastTwoSum#(int A_LATENCY) {
 
     gen int A0_LATENCY = 0
     gen int A1_LATENCY = A_LATENCY
-    if A_LATENCY > 3 {
-        A0_LATENCY = A_LATENCY - 1
+    if A_LATENCY == 4 {
+        A0_LATENCY = 3
         A1_LATENCY = 1
-        if A0_LATENCY > 4 {
-            A0_LATENCY = 4
-            A1_LATENCY = A_LATENCY - 4
-        }
+    } else if A_LATENCY == 5 {
+        A0_LATENCY = 4
+        A1_LATENCY = 1
+    } else if A_LATENCY == 6 {
+        A0_LATENCY = 4
+        A1_LATENCY = 2
+    } else if A_LATENCY == 7 {
+        A0_LATENCY = 4
+        A1_LATENCY = 3
     }
 
     input float a'-A_LATENCY
@@ -1176,7 +1181,7 @@ module dspfp32_mul_a_b_add_c_d#(int A_REGS, int B_REGS, int C_REGS, int D_REGS) 
         //               ++ +C  +D
         ip.fpopmode = 7'b00_110_11
     }
-    fpm_out = ip.fpm_out
+    fpa_out = ip.fpa_out
     pcout = ip.pcout
 
 }
