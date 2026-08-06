@@ -313,8 +313,8 @@ module DWTimesFP_Fast {
     float _t2 = dsp2.pcout
     float cl3 = dsp2.fpa_out
 
-    FastTwoSum#(A_LATENCY: 2) r
-    r.a = dspfp32_delay#(DELAY: 5)(ch)
+    FastTwoSum#(A_LATENCY: 7) r
+    r.a = ch
     r.b = cl3
     float _rh = r.rh
     float _rl = r.rl
@@ -363,8 +363,8 @@ module DWTimesFP_Accurate {
     float tl2 = dsp1.fpa_out
     float _t2 = dsp1.pcout
 
-    FastTwoSum#(A_LATENCY: 2) r
-    r.a = dspfp32_delay#(DELAY: 4)(th)
+    FastTwoSum#(A_LATENCY: 6) r
+    r.a = th
     r.b = tl2
     float _rh = r.rh
     float _rl = r.rl
@@ -415,8 +415,8 @@ module DWTimesDW_Fast {
     float _t0 = dsp2.pcout
     float cl3 = dsp2.fpa_out
 
-    FastTwoSum#(A_LATENCY: 2) r
-    r.a = dspfp32_delay#(DELAY: 5)(ch)
+    FastTwoSum#(A_LATENCY: 7) r
+    r.a = ch
     r.b = cl3
 
     rh = r.rh
@@ -563,28 +563,52 @@ module TwoSum2 {
 module FastTwoSum#(int A_LATENCY) {
     clock aclk
 
+    gen int A0_LATENCY = 0
+    gen int A1_LATENCY = A_LATENCY
+    if A_LATENCY > 3 {
+        A0_LATENCY = A_LATENCY - 1
+        A1_LATENCY = 1
+        if A0_LATENCY > 4 {
+            A0_LATENCY = 4
+            A1_LATENCY = A_LATENCY - 4
+        }
+    }
+
     input float a'-A_LATENCY
     input float b'0
 
     output float rh
     output float rl
 
-    dspfp32_add_c_d#(C_REGS: A_LATENCY, D_REGS: 0) dsp0
-    dsp0.apply(a, b)
-    float rhc = dsp0.pcout
-    rh = dsp0.fpa_out
+    float a2
+    float rhc
+    if A0_LATENCY == 0 {
+        dspfp32_add_c_d#(C_REGS: A1_LATENCY, D_REGS: 0) dsp0
+        dsp0.apply(a, b)
+        rhc = dsp0.pcout
+        rh = dsp0.fpa_out
+        a2 = a
+    } else {
+        dspfp32_mul_a_b_add_c_d#(A_REGS: A0_LATENCY-2, B_REGS: 0, C_REGS: A1_LATENCY, D_REGS: 0) dsp0
+        a2 = dsp0.fpm_out
+        dsp0.mul(a, 1.0)
+        dsp0.add(a2, b)
+        rhc = dsp0.pcout
+        rh = dsp0.fpa_out
+    }
 
     float z
-    if A_LATENCY <= 2 {
-        dspfp32_add_nc_pcin#(C_REGS: A_LATENCY+1) dsp1
-        dsp1.apply(a, rhc)
+    if A1_LATENCY <= 2 {
+        dspfp32_add_nc_pcin#(C_REGS: A1_LATENCY+1) dsp1
+        dsp1.apply(a2, rhc)
         z = dsp1.pcout
         float _t0 = dsp1.fpa_out
     } else {
-        dspfp32_mac_a_b_pcin#(A_REGS: A_LATENCY-1, B_REGS: 0) dsp1
-        dsp1.apply(a, -1.0, rhc)
+        dspfp32_mac_a_b_pcin#(A_REGS: A1_LATENCY-1, B_REGS: 0) dsp1
+        dsp1.apply(a2, -1.0, rhc)
         z = dsp1.pcout
         float _t0 = dsp1.fpa_out
+        float _t1 = dsp1.fpm_out
     }
 
     dspfp32_add_c_npcin#(C_REGS: 2) dsp2
