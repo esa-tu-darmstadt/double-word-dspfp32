@@ -107,6 +107,22 @@ module SUS_DWTimesDW_Fast {
 
 }
 
+module testbench {
+
+    float[4] vals
+    vals[0] = 1538.68311
+    vals[1] = 0.000015315
+    vals[2] = 198935.1353
+    vals[3] = 0.0016566
+
+    DWPlusDW_Accurate inst
+    inst.xh = vals[0]
+    inst.xl = vals[1]
+    inst.yh = vals[2]
+    inst.yl = vals[3]
+
+}
+
 // ################################################################
 // ##  Algorithms  ################################################
 // ################################################################
@@ -511,6 +527,10 @@ module TwoSum2 {
     bool[7] PC_MINUS_C = 7'b10_110_10
     //                      +- +PC -D
     bool[7] PC_MINUS_D = 7'b01_111_11
+    //                      +- +C  -PC
+    bool[7] C_MINUS_PC = 7'b01_110_10
+    //                      +- +PC -M
+    bool[7] M_MINUS_PC = 7'b01_111_01
 
     // rh     = a + b
     // pcout0 = rh
@@ -539,9 +559,9 @@ module TwoSum2 {
 
     // rl = (sel ? b : a) - pcout1
     dspfp32_full#(A_REGS: 0, B_REGS: 0, C_REGS: 2, D_REGS: 0, M_REGS: 2, OP_REGS: 2, ACIN: 0, PCOUT_FPA: 1) dsp2
-    bool[7] fpopmode = PC_MINUS_D
+    bool[7] fpopmode = C_MINUS_PC
     when sel {
-        fpopmode = PC_MINUS_C
+        fpopmode = M_MINUS_PC
     }
     dsp2.apply(b, 1.0, a, 0.0, 0.0, pcout1, fpopmode)
     float _t0 = dsp2.acout
