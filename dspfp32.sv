@@ -147,8 +147,8 @@ module dspfp32_full_ip#(
 DSPFP32 #(
     // Feature Control Attributes: Data Path Selection
     .A_FPTYPE("B32"),// B16, B32
-    .A_INPUT(ACIN ? "CASCADE" : "DIRECT"),// Selects A input source, "DIRECT" (A port) or "CASCADE" (ACIN port)
-    .B_INPUT(BCIN ? "CASCADE" : "DIRECT"),// Selects B input source, "DIRECT" (B port) or "CASCADE" (BCIN port)
+    .A_INPUT(ACIN == 1 ? "CASCADE" : "DIRECT"),// Selects A input source, "DIRECT" (A port) or "CASCADE" (ACIN port)
+    .B_INPUT(BCIN == 1 ? "CASCADE" : "DIRECT"),// Selects B input source, "DIRECT" (B port) or "CASCADE" (BCIN port)
     .BCASCSEL("B"),// Selects B cascade out data (B, D).
     .B_D_FPTYPE("B32"),// B16, B32
     .PCOUTSEL(PCOUT_FPA == 1 ? "FPA" : "FPM"),// Select PCOUT output cascade of DSPFP32 (FPA, FPM)
@@ -206,7 +206,7 @@ DSPFP32 #(
     .PCIN(pcin),// 32-bit input: P cascade
     // Control inputs: Control Inputs/Status Bits
     .CLK(aclk),// 1-bit input: Clock
-    .FPINMODE(1'b0),// 1-bit input: Controls select for B/D input data mux.
+    .FPINMODE(1'b1),// 1-bit input: Controls select for B/D input data mux.
     .FPOPMODE(fpopmode),// 7-bit input: Selects input signals to floating-point adder and input negation.
     // Data inputs: Data Ports
     .A_EXP(a[30:23]),// 8-bit input: A data exponent
@@ -275,8 +275,8 @@ module dspfp32_mul_add_ip#(
 DSPFP32 #(
     // Feature Control Attributes: Data Path Selection
     .A_FPTYPE("B32"),// B16, B32
-    .A_INPUT(ACIN ? "CASCADE" : "DIRECT"),// Selects A input source, "DIRECT" (A port) or "CASCADE" (ACIN port)
-    .B_INPUT(BCIN ? "CASCADE" : "DIRECT"),// Selects B input source, "DIRECT" (B port) or "CASCADE" (BCIN port)
+    .A_INPUT(ACIN == 1 ? "CASCADE" : "DIRECT"),// Selects A input source, "DIRECT" (A port) or "CASCADE" (ACIN port)
+    .B_INPUT(BCIN == 1 ? "CASCADE" : "DIRECT"),// Selects B input source, "DIRECT" (B port) or "CASCADE" (BCIN port)
     .BCASCSEL("B"),// Selects B cascade out data (B, D).
     .B_D_FPTYPE("B32"),// B16, B32
     .PCOUTSEL(PCOUT_FPA == 1 ? "FPA" : "FPM"),// Select PCOUT output cascade of DSPFP32 (FPA, FPM)
@@ -334,7 +334,7 @@ DSPFP32 #(
     .PCIN(pcin),// 32-bit input: P cascade
     // Control inputs: Control Inputs/Status Bits
     .CLK(aclk),// 1-bit input: Clock
-    .FPINMODE(1'b0),// 1-bit input: Controls select for B/D input data mux.
+    .FPINMODE(1'b1),// 1-bit input: Controls select for B/D input data mux.
     .FPOPMODE(fpopmode),// 7-bit input: Selects input signals to floating-point adder and input negation.
     // Data inputs: Data Ports
     .A_EXP(a[30:23]),// 8-bit input: A data exponent
