@@ -306,10 +306,12 @@ module DWTimesFP_Fast {
     float _t0 = dsp0.fpm_out
     float _t1 = dsp0.pcout
 
-    dspfp32_add_c_d#(C_REGS: 3, D_REGS: 0) dsp1
-    dsp1.apply(dspfp32_delay#(DELAY: 3)(cl2), cl)
-    float cl3 = dsp1.fpa_out
-    float _t2 = dsp1.pcout
+    dspfp32_mul_a_b_add_c_d#(A_REGS: 2, B_REGS: 0, C_REGS: 2, D_REGS: 0) dsp2
+    float cl2m = dsp2.fpm_out
+    dsp2.mul(cl2, 1.0)
+    dsp2.add(cl2m, cl)
+    float _t2 = dsp2.pcout
+    float cl3 = dsp2.fpa_out
 
     FastTwoSum#(A_LATENCY: 2) r
     r.a = dspfp32_delay#(DELAY: 5)(ch)
@@ -406,8 +408,11 @@ module DWTimesDW_Fast {
     float _tl2 = dsp1.fpm_out
     float cl2 = dsp1.fpa_out
 
-    dspfp32_add_c_d#(C_REGS: 3, D_REGS: 0) dsp2
-    dsp2.apply(dspfp32_delay#(DELAY: 3)(cl2), cl)
+    dspfp32_mul_a_b_add_c_d#(A_REGS: 2, B_REGS: 0, C_REGS: 2, D_REGS: 0) dsp2
+    float cl2m = dsp2.fpm_out
+    dsp2.mul(cl2, 1.0)
+    dsp2.add(cl2m, cl)
+    float _t0 = dsp2.pcout
     float cl3 = dsp2.fpa_out
 
     FastTwoSum#(A_LATENCY: 2) r
@@ -934,7 +939,6 @@ module dspfp32_add_c_npcin#(int C_REGS) {
 
 }
 
-
 module dspfp32_mul_a_b#(int A_REGS, int B_REGS) {
     clock aclk
 
@@ -1089,5 +1093,66 @@ module dspfp32_full_b #(int A_REGS, int B_REGS, int C_REGS, int D_REGS, int M_RE
     pcout = ip.pcout
     bcout = ip.bcout
     acout = ip.acout
+
+}
+
+extern module dspfp32_mul_add_ip #(int A_REGS, int B_REGS, int C_REGS, int D_REGS, int M_REGS, int OP_REGS, int ACIN, int BCIN, int PCOUT_FPA) {
+
+    assert#(C: 0 <= A_REGS & A_REGS <= 2)
+    assert#(C: 0 <= B_REGS & B_REGS <= 1)
+    assert#(C: 0 <= C_REGS & C_REGS <= 3)
+    assert#(C: 0 <= D_REGS & D_REGS <= 1)
+    assert#(C: 0 <= M_REGS & M_REGS <= 2)
+    assert#(C: 0 <= OP_REGS & OP_REGS <= 3)
+    assert#(C: 0 <= PCOUT_FPA & PCOUT_FPA <= 1)
+
+    domain aclk
+    input float a'-(A_REGS+M_REGS)
+    input float b'-(B_REGS+M_REGS)
+    input float acin'-(A_REGS+M_REGS)
+    input float bcin'-(B_REGS+M_REGS)
+    output float fpm_out'0
+    output float acout'-(A_REGS+M_REGS-1)
+    output float bcout'-M_REGS
+
+    domain bclk
+    input float c'-C_REGS
+    input float d'-D_REGS
+    input float pcin'0
+    input bool[7] fpopmode'-OP_REGS
+    output float fpa_out'1
+    output float pcout'PCOUT_FPA
+}
+
+module dspfp32_mul_a_b_add_c_d#(int A_REGS, int B_REGS, int C_REGS, int D_REGS) {
+
+    dspfp32_mul_add_ip#(A_REGS: A_REGS, B_REGS: B_REGS, C_REGS: C_REGS, D_REGS: D_REGS, M_REGS: 2, OP_REGS: 0, ACIN: 0, BCIN: 0, PCOUT_FPA: 1) ip
+
+    domain aclk
+    output float fpm_out'0
+
+    interface mul: float a'-(A_REGS+2), float b'-(B_REGS+2) {
+        ip.a = a
+        ip.b = b
+        ip.acin = 0.0
+        ip.bcin = 0.0
+        float _acout = ip.acout
+        float _bcout = ip.bcout
+    }
+    fpm_out = ip.fpm_out
+
+    domain bclk
+    output float fpa_out'1
+    output float pcout'1
+
+    interface add: float c'-C_REGS, float d'-D_REGS {
+        ip.c = c
+        ip.d = d
+        ip.pcin = 0.0
+        //               ++ +C  +D
+        ip.fpopmode = 7'b00_110_11
+    }
+    fpm_out = ip.fpm_out
+    pcout = ip.pcout
 
 }
