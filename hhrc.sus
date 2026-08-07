@@ -420,12 +420,12 @@ module DWTimesFP_Accurate {
     float chc = c.rhc
     float cl = c.rlc
 
-    dspfp32_mul_a_b#(A_REGS: 0, B_REGS: 0) dsp0
+    dspfp32_mul_a_b#(A_REGS: 1, B_REGS: 1) dsp0
     dsp0.apply(xl, y)
     float cl2 = dsp0.fpm_out
     float _t1 = dsp0.pcout
 
-    FastTwoSumB#(B_REGS: 2) t
+    FastTwoSumB#(B_REGS: 1) t
     t.a = ch
     t.ac = chc
     t.b = cl2
