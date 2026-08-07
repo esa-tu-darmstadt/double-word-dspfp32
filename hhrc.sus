@@ -115,11 +115,22 @@ module testbench {
     vals[2] = 198935.1353
     vals[3] = 0.0016566
 
+    float[2] res
+    res[0] = 200473.82812
+    res[1] = -0.00272261630743742
+
     DWPlusDW_Accurate inst
     inst.xh = vals[0]
     inst.xl = vals[1]
     inst.yh = vals[2]
     inst.yl = vals[3]
+
+    int[4] ires
+    ires[0] = BitsToUInt(ToBits(res[0]))
+    ires[1] = BitsToUInt(ToBits(res[1]))
+    ires[2] = BitsToUInt(ToBits(inst.rh))
+    ires[3] = BitsToUInt(ToBits(inst.rl))
+    bool valid = ires[0] == ires[2] & ires[1] == ires[3]
 
 }
 
