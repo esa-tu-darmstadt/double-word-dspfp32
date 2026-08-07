@@ -31,6 +31,11 @@ DW Split(float x) {
     float q = x - p;
     float x1 = p + q;
     float x2 = x - x1;
+    //std::cout << "    SplitC: " << SplitC << std::endl;
+    //std::cout << "    p: " << p << std::endl;
+    //std::cout << "    q: " << q << std::endl;
+    //std::cout << "    x1: " << x1 << std::endl;
+    //std::cout << "    x2: " << x2 << std::endl;
     DW res;
     res.h = x1;
     res.l = x2;
@@ -42,6 +47,8 @@ DW TwoProd(float a, float b) {
     res.h = a * b;
     DW a1 = Split(a);
     DW b1 = Split(b);
+    //std::cout << "  a1: " << a1.h << " " << a1.l << std::endl;
+    //std::cout << "  b1: " << b1.h << " " << b1.l << std::endl;
     res.l = ((a1.h * b1.h - res.h) + a1.h * b1.l + a1.l * b1.h) + a1.l * b1.l;
     return res;
 }

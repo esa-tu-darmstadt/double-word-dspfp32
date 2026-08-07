@@ -116,10 +116,10 @@ module testbench {
     vals[3] = 0.0016566
 
     float[2] res
-    res[0] = 200473.82812
-    res[1] = -0.00272261630743742
+    res[0] = 306098144.0
+    res[1] = 9.55941200256348
 
-    DWPlusDW_Accurate inst
+    DWTimesDW_Fast inst
     inst.xh = vals[0]
     inst.xl = vals[1]
     inst.yh = vals[2]
@@ -759,6 +759,7 @@ module Split {
     // Calculated as β^(s) + 1. See Boldo 2006 Algorithm 1 and 2 for explanations.
     gen int SplitC = pow#(B: 2, E: SplitS) + 1
     int#(FROM: 0, TO: 1 << 32) SplitC2 = SplitC
+    float SplitCF = 2049.0
 
     input float x'0
 
@@ -773,7 +774,7 @@ module Split {
     // q = x - p
     // xc = x'+2
     dspfp32_full#(A_REGS: 0, B_REGS: 0, C_REGS: 2, D_REGS: 0, M_REGS: 2, OP_REGS: 0, ACIN: 0, PCOUT_FPA: 1) dsp0
-    dsp0.apply(x, FromBits(ToBits(SplitC2)), x, 0.0, 0.0, 0.0, SUB_C_M)
+    dsp0.apply(x, SplitCF, x, 0.0, 0.0, 0.0, SUB_C_M)
     float p   = dsp0.fpm_out
     float _t0 = dsp0.fpa_out
     float q   = dsp0.pcout
