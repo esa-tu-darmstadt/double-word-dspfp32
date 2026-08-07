@@ -1,21 +1,50 @@
 #include <iostream>
 #include <iomanip>
+#include <fstream>
+#include <vector>
+#include <cstdint>
+#include <random>
 
 struct DW {
     float h;
     float l;
 };
 
+static int log_level = 1;
+
+void log0(const char* name) {
+    if (log_level != 0) {
+        std::cout << name << std::endl;
+    }
+}
+
+void log1(const char* name, float a) {
+    if (log_level != 0) {
+        std::cout << name << ": " << a << std::endl;
+    }
+}
+
+void log2(const char* name, DW a) {
+    if (log_level != 0) {
+        std::cout << name << ": " << a.h << " " << a.l << std::endl;
+    }
+}
+
 DW FastTwoSum(float a, float b) {
     DW res;
     res.h = a + b;
     float z = res.h - a;
     res.l = b - z;
+    //log1("    a ", a);
+    //log1("    b ", b);
+    //log1("    rh", res.h);
+    //log1("    z ", z);
+    //log1("    rl", res.l);
     return res;
 }
 
 DW TwoSum(float a, float b) {
-    if (a > b) {
+    if (fabs(a) > fabs(b)) {
         return FastTwoSum(a, b);
     } else {
         return FastTwoSum(b, a);
@@ -31,11 +60,11 @@ DW Split(float x) {
     float q = x - p;
     float x1 = p + q;
     float x2 = x - x1;
-    //std::cout << "    SplitC: " << SplitC << std::endl;
-    //std::cout << "    p: " << p << std::endl;
-    //std::cout << "    q: " << q << std::endl;
-    //std::cout << "    x1: " << x1 << std::endl;
-    //std::cout << "    x2: " << x2 << std::endl;
+    //log1("    SplitC", SplitC);
+    //log1("    p", p);
+    //log1("    q", q);
+    //log1("    x1", x1);
+    //log1("    x2", x2);
     DW res;
     res.h = x1;
     res.l = x2;
@@ -47,8 +76,8 @@ DW TwoProd(float a, float b) {
     res.h = a * b;
     DW a1 = Split(a);
     DW b1 = Split(b);
-    //std::cout << "  a1: " << a1.h << " " << a1.l << std::endl;
-    //std::cout << "  b1: " << b1.h << " " << b1.l << std::endl;
+    //log2("  a1", a1);
+    //log2("  b1", b1);
     res.l = ((a1.h * b1.h - res.h) + a1.h * b1.l + a1.l * b1.h) + a1.l * b1.l;
     return res;
 }
@@ -161,7 +190,7 @@ DW DWTimesFP_Accurate(DW x, DW y) {
     std::cout << "  cl2: " << cl2 << std::endl;
     DW t = FastTwoSum(c.h, cl2);
     std::cout << "  t: " << t.h << " " << t.l << std::endl;
-    float tl2 = t.l * c.l;
+    float tl2 = t.l + c.l;
     std::cout << "  tl2: " << tl2 << std::endl;
     DW r = FastTwoSum(t.h, tl2);
 
@@ -192,18 +221,69 @@ DW DWTimesDW_Fast(DW x, DW y) {
     return r;
 }
 
-int main(int argc, char** argv) {
-    std::cout << std::setprecision(15);
+void write_hex_file(const std::string& filename, const std::vector<float>& data) {
+    std::ofstream out(filename);
+    for (float fvalue : data) {
+        uint32_t ivalue = *((uint32_t*)&fvalue);
+        out << std::uppercase
+            << std::hex
+            << std::setw(8)
+            << std::setfill('0')
+            << ivalue
+            << '\n';
+    }
+}
 
-    DW x = { h: 1538.68311, l: 0.000015315 };
-    DW y = { h: 198935.1353, l: 0.0016566 };
-    FPPlusFP(x, y);
-    DWPlusFP(x, y);
-    DWPlusDW_Sloppy(x, y);
-    DWPlusDW_Accurate(x, y);
-    FPTimesFP(x, y);
-    DWTimesFP_Fast(x, y);
-    DWTimesFP_Accurate(x, y);
-    DWTimesDW_Fast(x, y);
+int main(int argc, char** argv) {
+    if (argc < 2) {
+        std::cout << "output path missing" << std::endl;
+        return 0;
+    }
+
+    std::cout << std::setprecision(15);
+    std::random_device rd;
+    std::mt19937 gen(rd());
+    std::uniform_real_distribution<float> dist(-100000.0f, 100000.0f);
+
+    std::vector<float> values;
+    for (uint32_t i = 0; i < 1024; i++) {
+        float xh = dist(gen);
+        float yh = dist(gen);
+        std::uniform_real_distribution<float> dist2(-xh / 10000.0f, xh / 10000.0f);
+        std::uniform_real_distribution<float> dist3(-yh / 10000.0f, yh / 10000.0f);
+        float xl = dist2(gen);
+        float yl = dist3(gen);
+        DW x = { xh, xl };
+        DW y = { yh, yl };
+        DW r0 = FPPlusFP(x, y);
+        DW r1 = DWPlusFP(x, y);
+        DW r2 = DWPlusDW_Sloppy(x, y);
+        DW r3 = DWPlusDW_Accurate(x, y);
+        DW r4 = FPTimesFP(x, y);
+        DW r5 = DWTimesFP_Fast(x, y);
+        DW r6 = DWTimesFP_Accurate(x, y);
+        DW r7 = DWTimesDW_Fast(x, y);
+        values.push_back(x.h);
+        values.push_back(x.l);
+        values.push_back(y.h);
+        values.push_back(y.l);
+        values.push_back(r0.h);
+        values.push_back(r0.l);
+        values.push_back(r1.h);
+        values.push_back(r1.l);
+        values.push_back(r2.h);
+        values.push_back(r2.l);
+        values.push_back(r3.h);
+        values.push_back(r3.l);
+        values.push_back(r4.h);
+        values.push_back(r4.l);
+        values.push_back(r5.h);
+        values.push_back(r5.l);
+        values.push_back(r6.h);
+        values.push_back(r6.l);
+        values.push_back(r7.h);
+        values.push_back(r7.l);
+    }
+    write_hex_file(argv[1], values);
     return 0;
 }

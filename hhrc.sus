@@ -577,8 +577,8 @@ module TwoSum2 {
     bool[7] PC_MINUS_D = 7'b01_111_11
     //                      +- +C  -PC
     bool[7] C_MINUS_PC = 7'b01_110_10
-    //                      +- +PC -M
-    bool[7] M_MINUS_PC = 7'b01_111_01
+    //                      -+ -PC +M
+    bool[7] M_MINUS_PC = 7'b10_111_01
 
     // rh     = a + b
     // pcout0 = rh
