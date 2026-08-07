@@ -107,6 +107,70 @@ module SUS_DWTimesDW_Fast {
 
 }
 
+module testbench {
+
+    input float[20] vals'0
+    output bool[8] valids
+
+    FPPlusFP inst0
+    inst0.x = vals[0]
+    inst0.y = vals[2]
+    bool valid0 = BitsToUInt(ToBits(vals[4])) == BitsToUInt(ToBits(inst0.rh)) & BitsToUInt(ToBits(vals[5])) == BitsToUInt(ToBits(inst0.rl))
+    valids[0] = valid0
+
+    DWPlusFP inst1
+    inst1.xh = vals[0]
+    inst1.xl = vals[1]
+    inst1.y = vals[2]
+    bool valid1 = BitsToUInt(ToBits(vals[6])) == BitsToUInt(ToBits(inst1.rh)) & BitsToUInt(ToBits(vals[7])) == BitsToUInt(ToBits(inst1.rl))
+    valids[1] = valid1
+
+    DWPlusDW_Sloppy inst2
+    inst2.xh = vals[0]
+    inst2.xl = vals[1]
+    inst2.yh = vals[2]
+    inst2.yl = vals[3]
+    bool valid2 = BitsToUInt(ToBits(vals[8])) == BitsToUInt(ToBits(inst2.rh)) & BitsToUInt(ToBits(vals[9])) == BitsToUInt(ToBits(inst2.rl))
+    valids[2] = valid2
+
+    DWPlusDW_Accurate inst3
+    inst3.xh = vals[0]
+    inst3.xl = vals[1]
+    inst3.yh = vals[2]
+    inst3.yl = vals[3]
+    bool valid3 = BitsToUInt(ToBits(vals[10])) == BitsToUInt(ToBits(inst3.rh)) & BitsToUInt(ToBits(vals[11])) == BitsToUInt(ToBits(inst3.rl))
+    valids[3] = valid3
+
+    FPTimesFP inst4
+    inst4.x = vals[0]
+    inst4.y = vals[2]
+    bool valid4 = BitsToUInt(ToBits(vals[12])) == BitsToUInt(ToBits(inst4.rh)) & BitsToUInt(ToBits(vals[13])) == BitsToUInt(ToBits(inst4.rl))
+    valids[4] = valid4
+
+    DWTimesFP_Fast inst5
+    inst5.xh = vals[0]
+    inst5.xl = vals[1]
+    inst5.y = vals[2]
+    bool valid5 = BitsToUInt(ToBits(vals[14])) == BitsToUInt(ToBits(inst5.rh)) & BitsToUInt(ToBits(vals[15])) == BitsToUInt(ToBits(inst5.rl))
+    valids[5] = valid5
+
+    DWTimesFP_Accurate inst6
+    inst6.xh = vals[0]
+    inst6.xl = vals[1]
+    inst6.y = vals[2]
+    bool valid6 = BitsToUInt(ToBits(vals[16])) == BitsToUInt(ToBits(inst6.rh)) & BitsToUInt(ToBits(vals[17])) == BitsToUInt(ToBits(inst6.rl))
+    valids[6] = valid6
+
+    DWTimesDW_Fast inst7
+    inst7.xh = vals[0]
+    inst7.xl = vals[1]
+    inst7.yh = vals[2]
+    inst7.yl = vals[3]
+    bool valid7 = BitsToUInt(ToBits(vals[18])) == BitsToUInt(ToBits(inst7.rh)) & BitsToUInt(ToBits(vals[19])) == BitsToUInt(ToBits(inst7.rl))
+    valids[7] = valid7
+
+}
+
 // ################################################################
 // ##  Algorithms  ################################################
 // ################################################################
@@ -352,9 +416,9 @@ module DWTimesFP_Accurate {
     float cl2 = dsp0.fpm_out
     float _t1 = dsp0.pcout
 
-    FastTwoSum#(A_LATENCY: 2) t
-    t.a = cl2
-    t.b = ch
+    FastTwoSumB#(B_REGS: 2) t
+    t.a = ch
+    t.b = cl2
     float th = t.rh
     float tl = t.rl
 
@@ -511,6 +575,10 @@ module TwoSum2 {
     bool[7] PC_MINUS_C = 7'b10_110_10
     //                      +- +PC -D
     bool[7] PC_MINUS_D = 7'b01_111_11
+    //                      +- +C  -PC
+    bool[7] C_MINUS_PC = 7'b01_110_10
+    //                      -+ -PC +M
+    bool[7] M_MINUS_PC = 7'b10_111_01
 
     // rh     = a + b
     // pcout0 = rh
@@ -539,9 +607,9 @@ module TwoSum2 {
 
     // rl = (sel ? b : a) - pcout1
     dspfp32_full#(A_REGS: 0, B_REGS: 0, C_REGS: 2, D_REGS: 0, M_REGS: 2, OP_REGS: 2, ACIN: 0, PCOUT_FPA: 1) dsp2
-    bool[7] fpopmode = PC_MINUS_D
+    bool[7] fpopmode = C_MINUS_PC
     when sel {
-        fpopmode = PC_MINUS_C
+        fpopmode = M_MINUS_PC
     }
     dsp2.apply(b, 1.0, a, 0.0, 0.0, pcout1, fpopmode)
     float _t0 = dsp2.acout
@@ -620,6 +688,48 @@ module FastTwoSum#(int A_LATENCY) {
     dsp2.apply(b, z)
     float _rlc = dsp2.pcout
     rl = dsp2.fpa_out
+
+    /*
+        two<T> res;
+        res.h = a + b;
+        T z = res.h - a;
+        res.l = b - z;
+        return res;
+    */
+
+}
+
+module FastTwoSumB#(int B_REGS) {
+    clock aclk
+
+    input float a'0
+    input float b'-B_REGS
+
+    output float rh
+    output float rl
+
+    dspfp32_add_c_d#(C_REGS: B_REGS, D_REGS: 0) dsp0
+    dsp0.apply(b, a)
+    float rhc = dsp0.pcout
+    rh = dsp0.fpa_out
+
+    dspfp32_add_nc_pcin#(C_REGS: 1) dsp1
+    dsp1.apply(a, rhc)
+    float z = dsp1.pcout
+    float _t0 = dsp1.fpa_out
+
+    if (B_REGS <= 1) {
+        dspfp32_add_c_npcin#(C_REGS: B_REGS+2) dsp2
+        dsp2.apply(b, z)
+        float _rlc = dsp2.pcout
+        rl = dsp2.fpa_out
+    } else {
+        dspfp32_mac_a_b_npcin#(A_REGS: B_REGS, B_REGS: 0) dsp2
+        dsp2.apply(b, 1.0, z)
+        float _t1 = dsp2.fpm_out
+        float _rlc = dsp2.pcout
+        rl = dsp2.fpa_out
+    }
 
     /*
         two<T> res;
@@ -728,6 +838,7 @@ module Split {
     // Calculated as β^(s) + 1. See Boldo 2006 Algorithm 1 and 2 for explanations.
     gen int SplitC = pow#(B: 2, E: SplitS) + 1
     int#(FROM: 0, TO: 1 << 32) SplitC2 = SplitC
+    float SplitCF = 2049.0
 
     input float x'0
 
@@ -742,7 +853,7 @@ module Split {
     // q = x - p
     // xc = x'+2
     dspfp32_full#(A_REGS: 0, B_REGS: 0, C_REGS: 2, D_REGS: 0, M_REGS: 2, OP_REGS: 0, ACIN: 0, PCOUT_FPA: 1) dsp0
-    dsp0.apply(x, FromBits(ToBits(SplitC2)), x, 0.0, 0.0, 0.0, SUB_C_M)
+    dsp0.apply(x, SplitCF, x, 0.0, 0.0, 0.0, SUB_C_M)
     float p   = dsp0.fpm_out
     float _t0 = dsp0.fpa_out
     float q   = dsp0.pcout
@@ -1006,6 +1117,31 @@ module dspfp32_mac_a_b_pcin#(int A_REGS, int B_REGS) {
         ip.pcin = pcin
         //               ++ +PCIN +M
         ip.fpopmode = 7'b00_111_01
+    }
+    
+    fpm_out = ip.fpm_out
+    fpa_out = ip.fpa_out
+    pcout = ip.pcout
+
+}
+
+module dspfp32_mac_a_b_npcin#(int A_REGS, int B_REGS) {
+    clock aclk
+
+    output float fpm_out'0
+    output float fpa_out'1
+    output float pcout'1
+
+    dspfp32_full_ip#(A_REGS: A_REGS, B_REGS: B_REGS, C_REGS: 0, D_REGS: 0, M_REGS: 2, OP_REGS: 0, ACIN: 0, BCIN: 0, PCOUT_FPA: 1) ip
+
+    interface apply: float a'-(A_REGS+2), float b'-(B_REGS+2), float pcin'0 {
+        ip.a = a
+        ip.b = b
+        ip.c = 0.0
+        ip.d = 0.0
+        ip.pcin = pcin
+        //               -+ -PCIN +M
+        ip.fpopmode = 7'b10_111_01
     }
     
     fpm_out = ip.fpm_out

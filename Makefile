@@ -30,6 +30,15 @@ v80/tapasco: v80/SUSpMV_Full.zip
 	tapasco import $(BIN_DIR)/SUSpMV_Full.zip as 100 -p v80
 	tapasco --jobsFile tapasco/job_v80.json
 
+test_data.hex:
+	g++ main.cpp -fno-fast-math -o main && ./main done/test_data.hex
+
+test_bench.sv:
+	sus_compiler hhrc.sus -o done/testbench.sv --top testbench
+	cp testbench.sv done/testbench_top.sv
+	cat done/testbench.sv >> done/testbench_top.sv
+	cat dspfp32.sv >> done/testbench_top.sv
+
 clean: cleantmp
 	rm -rf v80
 	
