@@ -352,7 +352,7 @@ module FPTimesFP {
     r.a = x
     r.b = y
 
-    rh = r.rh
+    rh = r.rh_late
     rl = r.rl
 }
 
@@ -1178,8 +1178,8 @@ module dspfp32_mac_na_b_c#(int A_REGS, int B_REGS, int C_REGS) {
 
     output float fpm_out'0
     output float fpa_out'1
-    output float acout'0
-    output float bcout'0
+    output float acout'-2
+    output float bcout'-2
     output float pcout'1
 
     dspfp32_ip#(A_REGS: A_REGS, AC_REGS: A_REGS, B_REGS: B_REGS, C_REGS: C_REGS, D_REGS: 0, M_REGS: 2, OP_REGS: 0, ACIN: 0, BCIN: 1, PCOUT_FPA: 1) ip
