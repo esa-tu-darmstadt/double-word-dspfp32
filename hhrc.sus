@@ -1240,9 +1240,9 @@ module dspfp32_mac_a_b_add_c_pcin_op#(int A_REGS, int B_REGS, int C_REGS, int OP
     output float fpa_out'1
     output float pcout'1
 
-    dspfp32_ip#(A_REGS: A_REGS, AC_REGS: A_REGS, B_REGS: B_REGS, C_REGS: C_REGS, D_REGS: 0, M_REGS: 0, OP_REGS: OP_REGS, ACIN: 0, BCIN: 0, PCOUT_FPA: 1) ip
+    dspfp32_ip#(A_REGS: A_REGS, AC_REGS: A_REGS, B_REGS: B_REGS, C_REGS: C_REGS, D_REGS: 0, M_REGS: 2, OP_REGS: OP_REGS, ACIN: 0, BCIN: 0, PCOUT_FPA: 1) ip
 
-    interface apply: float a'-A_REGS, float b'-B_REGS, float c'-C_REGS, float pcin'0, bool[7] fpopmode'-OP_REGS {
+    interface apply: float a'-(A_REGS+2), float b'-(B_REGS+2), float c'-C_REGS, float pcin'0, bool[7] fpopmode'-OP_REGS {
         ip.a = a
         ip.b = b
         ip.c = c
