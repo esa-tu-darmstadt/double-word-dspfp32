@@ -878,6 +878,155 @@ module Split {
 
 }
 
+module TwoProd2 {
+    clock aclk
+
+    input float a'0
+    input float b'0
+
+    output float rh'3
+    output float rh_late'7
+    output float rl'10
+    output float rlc'10
+
+    gen bool[7] SUB_M_C    = 7'b10_110_01
+    gen bool[7] ADD_M_PCIN = 7'b00_111_01
+
+    // ################################
+    // ##  inline Split  ##############
+    float sa1_x = a
+
+    gen int MANTISSA_BITS = 22
+    gen int SplitS = pow#(B: 2, E: MANTISSA_BITS / 2) + 1
+    gen float SplitC = 2049.0
+    gen bool[7] ADD_C_PCIN = 7'b00_110_10
+    gen bool[7] SUB_M_PCIN = 7'b10_111_01
+    gen bool[7] SUB_C_M    = 7'b01_110_01
+
+    // p = x * SplitC
+    // q = x - p
+    dspfp32_full#(A_REGS: 0, B_REGS: 0, C_REGS: 2, D_REGS: 0, M_REGS: 2, OP_REGS: 0, ACIN: 0, PCOUT_FPA: 1) sa1_dsp0
+    sa1_dsp0.apply(sa1_x, SplitC, sa1_x, 0.0, 0.0, 0.0, SUB_C_M)
+    float sa1_p   = sa1_dsp0.fpm_out
+    float _sa1_t0 = sa1_dsp0.fpa_out
+    float sa1_q   = sa1_dsp0.pcout
+    float sa1_xc  = sa1_dsp0.acout
+
+    // x1 = p + q
+    dspfp32_mul_acin_b_add_c_pcin#(A_REGS: 1, B_REGS: 1, C_REGS: 1) sa1_dsp1
+    sa1_dsp1.add(sa1_p, sa1_q)
+    float sa1_x1  = sa1_dsp1.fpa_out
+    float sa1_x1c = sa1_dsp1.pcout
+    float sa1_xcc = sa1_dsp1.acout
+
+    // x2 = x - x1
+    dspfp32_full#(A_REGS: 1, B_REGS: 0, C_REGS: 0, D_REGS: 0, M_REGS: 2, OP_REGS: 0, ACIN: 1, PCOUT_FPA: 1) sa1_dsp2
+    sa1_dsp2.apply(0.0, 1.0, 0.0, 0.0, sa1_xcc, sa1_x1c, SUB_M_PCIN)
+    float _sa1_t4 = sa1_dsp2.fpm_out
+    float sa1_x2  = sa1_dsp2.fpa_out
+    float _sa1_t5 = sa1_dsp2.pcout
+    float _sa1_t6 = sa1_dsp2.acout
+    float a1h = sa1_x1
+    float a1l = sa1_x2
+    // ################################
+
+    // ################################
+    // ##  inline Split  ##############
+    float sb1_x = b
+
+    // p = x * SplitC
+    // q = x - p
+    dspfp32_full#(A_REGS: 0, B_REGS: 0, C_REGS: 2, D_REGS: 0, M_REGS: 2, OP_REGS: 0, ACIN: 0, PCOUT_FPA: 1) sb1_dsp0
+    sb1_dsp0.apply(SplitC, sb1_x, sb1_x, 0.0, 0.0, 0.0, SUB_C_M)
+    float sb1_p   = sb1_dsp0.fpm_out
+    float _sb1_t0 = sb1_dsp0.fpa_out
+    float sb1_q   = sb1_dsp0.pcout
+    float sb1_xc  = sb1_dsp0.bcout
+
+    // x1 = p + q
+    dspfp32_mul_a_d_add_c_pcin_bcarry#(A_REGS: 2, B_REGS: 1, C_REGS: 1, D_REGS: 0) sb1_dsp1
+    sb1_dsp1.add(sb1_p, sb1_q)
+    sb1_dsp1.carry(sb1_xc)
+    float sb1_x1  = sb1_dsp1.fpa_out
+    float sb1_x1c = sb1_dsp1.pcout
+    float sb1_xcc = sb1_dsp1.bcout
+
+    // x2 = x - x1
+    dspfp32_mac_a_bcin_npcin#(A_REGS: 0, B_REGS: 1) sb1_dsp2
+    sb1_dsp2.apply(1.0, sb1_xcc, sb1_x1c)
+    float _sb1_t4 = sb1_dsp2.fpm_out
+    float sb1_x2  = sb1_dsp2.fpa_out
+    float _sb1_t5 = sb1_dsp2.pcout
+    float b1h = sb1_x1
+    float b1l = sb1_x2
+    // ################################
+
+    // use free multipliers
+    // rh = a * b = sa1_xc * b
+    sa1_dsp1.mul(sa1_xc, b)
+    float rh2 = sa1_dsp1.fpm_out
+    rh = rh2
+    // delay rh
+    sb1_dsp1.mul(rh2, 1.0)
+    float rh3 = sb1_dsp1.fpm_out
+    rh_late = rh3
+
+    // r.l = ((a1.h * b1.h - r.h) + a1.h * b1.l + a1.l * b1.h) + a1.l * b1.l;
+
+    // tmp0 = a1h * b1h - rh
+    dspfp32_full#(A_REGS: 0, B_REGS: 0, C_REGS: 3, D_REGS: 0, M_REGS: 2, OP_REGS: 0, ACIN: 0, PCOUT_FPA: 1) dsp1
+    dsp1.apply(a1h, b1h, rh2, 0.0, 0.0, 0.0, SUB_M_C)
+    float _t3   = dsp1.fpm_out
+    float _t4   = dsp1.fpa_out
+    float tmp0  = dsp1.pcout
+    float a1hc  = dsp1.acout
+
+    // tmp1 = a1h * b1l + tmp0
+    dspfp32_full#(A_REGS: 1, B_REGS: 0, C_REGS: 0, D_REGS: 0, M_REGS: 2, OP_REGS: 0, ACIN: 1, PCOUT_FPA: 1) dsp2
+    dsp2.apply(0.0, b1l, 0.0, 0.0, a1hc, tmp0, ADD_M_PCIN)
+    float _t6  = dsp2.fpm_out
+    float _t7  = dsp2.fpa_out
+    float tmp1 = dsp2.pcout
+    float _t8  = dsp2.acout
+
+    // tmp2 = a1l * b1h + tmp1
+    dspfp32_full_b#(A_REGS: 2, B_REGS: 1, C_REGS: 0, D_REGS: 0, M_REGS: 2, OP_REGS: 0, BCIN: 0, PCOUT_FPA: 1) dsp3
+    dsp3.apply(b1h, a1l, 0.0, 0.0, 0.0, 0.0, tmp1, ADD_M_PCIN)
+    float _t9  = dsp3.fpm_out
+    float _t10 = dsp3.fpa_out
+    float _t11 = dsp3.acout
+    float a1lc = dsp3.bcout
+    float tmp2 = dsp3.pcout
+
+    // tmp3 = a1l * b1l + tmp2
+    dspfp32_full_b#(A_REGS: 2, B_REGS: 1, C_REGS: 0, D_REGS: 0, M_REGS: 2, OP_REGS: 0, BCIN: 1, PCOUT_FPA: 1) dsp4
+    dsp4.apply(b1l, 0.0, 0.0, 0.0, 0.0, a1lc, tmp2, ADD_M_PCIN)
+    float _t12  = dsp4.fpm_out
+    rl          = dsp4.fpa_out
+    float _t13  = dsp4.acout
+    float _tl4  = dsp4.bcout
+    rlc         = dsp4.pcout
+
+    /*
+    two<T> res;
+    res.h = a * b;
+
+    two<T> a1 = Split(a);
+    two<T> b1 = Split(b);
+
+    // Order must be preserved to ensure the proven error bounds
+    res.l = ((a1.h * b1.h - res.h) + a1.h * b1.l + a1.l * b1.h) + a1.l * b1.l;
+    return res;
+
+    Split(x):
+        T p = x * SplitC;
+        T q = x - p;
+        T x1 = p + q;
+        T x2 = x - x1;
+        return {x1, x2};
+    */
+}
+
 // ################################################################
 // ##  Extern  ####################################################
 // ################################################################
@@ -1328,6 +1477,40 @@ module dspfp32_mul_a_b_add_c_pcin#(int A_REGS, int B_REGS, int C_REGS) {
         float _bcout = ip.bcout
     }
     fpm_out = ip.fpm_out
+
+    domain bclk
+    output float fpa_out'1
+    output float pcout'1
+
+    interface add: float c'-C_REGS, float pcin'0 {
+        ip.c = c
+        ip.d = 0.0
+        ip.pcin = pcin
+        //               ++ +C  +PC
+        ip.fpopmode = 7'b00_110_10
+    }
+    fpa_out = ip.fpa_out
+    pcout = ip.pcout
+
+}
+
+module dspfp32_mul_acin_b_add_c_pcin#(int A_REGS, int B_REGS, int C_REGS) {
+
+    dspfp32_mul_add_ip#(A_REGS: A_REGS, B_REGS: B_REGS, C_REGS: C_REGS, D_REGS: 0, M_REGS: 2, OP_REGS: 0, ACIN: 0, BCIN: 0, PCOUT_FPA: 1) ip
+
+    clock aclk
+    output float fpm_out'0
+    output float acout'-2
+
+    interface mul: float acin'-(A_REGS+2), float b'-(B_REGS+2) {
+        ip.a = 0.0
+        ip.b = b
+        ip.acin = acin
+        ip.bcin = 0.0
+        float _bcout = ip.bcout
+    }
+    fpm_out = ip.fpm_out
+    acout = ip.acout
 
     domain bclk
     output float fpa_out'1
