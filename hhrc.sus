@@ -423,17 +423,30 @@ module DWTimesFP_Accurate {
     float chc = c.rhc
     float cl = c.rlc
 
-    dspfp32_mul_a_b#(A_REGS: 1, B_REGS: 1) dsp0
-    dsp0.apply(xl, y)
-    float cl2 = dsp0.fpm_out
-    float _t1 = dsp0.pcout
+    dspfp32_mul_a_b_add_c_pcin#(A_REGS: 1, B_REGS: 1, C_REGS: 1) fts_dsp0
+    fts_dsp0.mul(xl, y)
+    float cl2 = fts_dsp0.fpm_out
+    // ################################
+    // ##  inline FastTwoSum  #########
+    float fts_a  = ch
+    float fts_ac = chc
+    float fts_b  = cl2
+    fts_dsp0.add(fts_b, fts_ac)
+    float fts_rhc = fts_dsp0.pcout
+    float fts_rh  = fts_dsp0.fpa_out
 
-    FastTwoSumB#(B_REGS: 1) t
-    t.a = ch
-    t.ac = chc
-    t.b = cl2
-    float th = t.rh
-    float tl = t.rl
+    dspfp32_add_nc_pcin#(C_REGS: 1) fts_dsp1
+    fts_dsp1.apply(fts_a, fts_rhc)
+    float fts_z   = fts_dsp1.pcout
+    float _fts_t0 = fts_dsp1.fpa_out
+
+    dspfp32_add_c_npcin#(C_REGS: 3) fts_dsp2
+    fts_dsp2.apply(fts_b, fts_z)
+    float _fts_rlc = fts_dsp2.pcout
+    float fts_rl   = fts_dsp2.fpa_out
+    // ################################
+    float th = fts_rh
+    float tl = fts_rl
 
     dspfp32_add_c_pcin#(C_REGS: 3) dsp1
     dsp1.apply(tl, cl)
@@ -705,51 +718,6 @@ module FastTwoSum#(int A_LATENCY) {
     dsp2.apply(b, z)
     rlc = dsp2.pcout
     rl = dsp2.fpa_out
-
-    /*
-        two<T> res;
-        res.h = a + b;
-        T z = res.h - a;
-        res.l = b - z;
-        return res;
-    */
-
-}
-
-module FastTwoSumB#(int B_REGS) {
-    clock aclk
-
-    input float a'0
-    input float ac'0
-    input float b'-B_REGS
-
-    output float rh
-    output float rl
-    output float rhc
-    output float rlc
-
-    dspfp32_add_c_pcin#(C_REGS: B_REGS) dsp0
-    dsp0.apply(b, ac)
-    rhc = dsp0.pcout
-    rh = dsp0.fpa_out
-
-    dspfp32_add_nc_pcin#(C_REGS: 1) dsp1
-    dsp1.apply(a, rhc)
-    float z = dsp1.pcout
-    float _t0 = dsp1.fpa_out
-
-    if (B_REGS <= 1) {
-        dspfp32_add_c_npcin#(C_REGS: B_REGS+2) dsp2
-        dsp2.apply(b, z)
-        rlc = dsp2.pcout
-        rl = dsp2.fpa_out
-    } else {
-        dspfp32_mac_a_b_npcin#(A_REGS: B_REGS, B_REGS: 0) dsp2
-        dsp2.apply(b, 1.0, z)
-        float _t1 = dsp2.fpm_out
-        rlc = dsp2.pcout
-        rl = dsp2.fpa_out
-    }
 
     /*
         two<T> res;
