@@ -418,18 +418,16 @@ module DWTimesFP_Accurate {
     c.a = xh
     c.b = y
     float ch = c.rh
-    float chc = c.rhc
     float cl = c.rlc
 
-    dspfp32_mul_a_b_add_c_pcin#(A_REGS: 1, B_REGS: 1, C_REGS: 1) fts_dsp0
+    dspfp32_mul_a_b_add_c_d#(A_REGS: 1, B_REGS: 1, C_REGS: 1, D_REGS: 1) fts_dsp0
     fts_dsp0.mul(xl, y)
     float cl2 = fts_dsp0.fpm_out
     // ################################
     // ##  inline FastTwoSum  #########
     float fts_a  = ch
-    float fts_ac = chc
     float fts_b  = cl2
-    fts_dsp0.add(fts_b, fts_ac)
+    fts_dsp0.add(fts_b, fts_a)
     float fts_rhc = fts_dsp0.pcout
     float fts_rh  = fts_dsp0.fpa_out
 
