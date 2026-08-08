@@ -243,16 +243,17 @@ module DWPlusDW_Sloppy {
     TwoSum2 s
     s.a = xh
     s.b = yh
-    float sh = s.rh
-    float sl = s.rl
-    float slc = s.rlc
+    float sh   = s.rh
+    float _shc = s.rhc
+    float _sl  = s.rl
+    float slc  = s.rlc
 
-    dspfp32_add#(D_LATENCY: 0, C_LATENCY: 0) x0
+    dspfp32_add#(D_LATENCY: 1, C_LATENCY: 1) x0
     x0.d = xl
     x0.c = yl
     float v = x0.res
 
-    dspfp32_add_c_pcin#(C_REGS: 2) dsp0
+    dspfp32_add_c_pcin#(C_REGS: 1) dsp0
     dsp0.apply(v, slc)
     float w = dsp0.fpa_out
     float wc = dsp0.pcout
@@ -261,6 +262,8 @@ module DWPlusDW_Sloppy {
     r.a = sh
     r.b = w
     r.bc = wc
+    float _rhc = r.rhc
+    float _rlc = r.rlc
 
     /*
     two<T> s = algorithms::TwoSum(x.h, y.h);
