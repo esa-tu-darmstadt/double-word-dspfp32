@@ -431,7 +431,7 @@ module DWTimesFP_Accurate {
     float fts_rhc = fts_dsp0.pcout
     float fts_rh  = fts_dsp0.fpa_out
 
-    dspfp32_add_nc_pcin#(C_REGS: 1) fts_dsp1
+    dspfp32_add_nc_pcin#(C_REGS: 2) fts_dsp1
     fts_dsp1.apply(fts_a, fts_rhc)
     float fts_z   = fts_dsp1.pcout
     float _fts_t0 = fts_dsp1.fpa_out
@@ -572,7 +572,7 @@ module TwoSum {
     float pcout1 = dsp1.pcout
 
     // rl = (sel ? b : a) - pcout1
-    dspfp32_mac_a_b_add_c_pcin_op#(A_REGS: 0, B_REGS: 0, C_REGS: 2, OP_REGS: 0) dsp2
+    dspfp32_mac_a_b_add_c_pcin_op#(A_REGS: 0, B_REGS: 0, C_REGS: 2, OP_REGS: 1) dsp2
     bool[7] fpopmode1 = C_MINUS_PC
     when sel {
         fpopmode1 = M_MINUS_PC
@@ -731,8 +731,8 @@ module TwoProd {
     float sb1_x1c = sb1_dsp1.pcout
 
     // x2 = x - x1
-    dspfp32_add_c_npcin#(C_REGS: 2) sb1_dsp2
-    sb1_dsp2.apply(sb1_x, sb1_x1c)
+    dspfp32_mac_a_b_npcin#(A_REGS: 2, B_REGS: 0) sb1_dsp2
+    sb1_dsp2.apply(sb1_x, 1.0, sb1_x1c)
     float sb1_x2  = sb1_dsp2.fpa_out
     float _sb1_t5 = sb1_dsp2.pcout
     float b1h = sb1_x1
@@ -760,7 +760,7 @@ module TwoProd {
     float a1hc  = dsp1.acout
 
     // tmp1 = a1h * b1l + tmp0
-    dspfp32_mac_acin_b_pcin#(A_REGS: 0, B_REGS: 0) dsp2
+    dspfp32_mac_acin_b_pcin#(A_REGS: 1, B_REGS: 0) dsp2
     dsp2.apply(a1hc, b1l, tmp0)
     float tmp1 = dsp2.pcout
 
