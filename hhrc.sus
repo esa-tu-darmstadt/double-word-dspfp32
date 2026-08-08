@@ -369,7 +369,7 @@ module DWTimesFP_Fast {
     TwoProd c
     c.a = xh
     c.b = y
-    float ch = c.rh
+    float ch = c.rh_late
     float cl = c.rlc
 
     dspfp32_mac_a_b_c#(A_REGS: 1, B_REGS: 1, C_REGS: 0) dsp0
@@ -385,7 +385,7 @@ module DWTimesFP_Fast {
     float cl3c = dsp2.pcout
     float cl3 = dsp2.fpa_out
 
-    FastTwoSum#(A_LATENCY: 7) r
+    FastTwoSum#(A_LATENCY: 4) r
     r.a = ch
     r.b = cl3
     r.bc = cl3c
@@ -483,7 +483,7 @@ module DWTimesDW_Fast {
     TwoProd c
     c.a = xh
     c.b = yh
-    float ch = c.rh
+    float ch = c.rh_late
     float cl = c.rlc
 
     dspfp32_mul_a_b#(A_REGS: 1, B_REGS: 1) dsp0
@@ -502,7 +502,7 @@ module DWTimesDW_Fast {
     float cl3c = dsp2.pcout
     float cl3  = dsp2.fpa_out
 
-    FastTwoSum#(A_LATENCY: 7) r
+    FastTwoSum#(A_LATENCY: 4) r
     r.a = ch
     r.b = cl3
     r.bc = cl3c
