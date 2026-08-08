@@ -579,7 +579,7 @@ module TwoSum2 {
     bool[32] b_bits = ToBits(b)
     int#(FROM: 0, TO: 1 << 8) b_exp = BitsToUInt(b_bits[23+:8])
 
-    bool sel = a_exp >= b_exp
+    reg bool sel = a_exp >= b_exp
 
     //                      ++ +C  +D
     bool[7] C_PLUS_D   = 7'b00_110_11
@@ -605,7 +605,7 @@ module TwoSum2 {
 
     // z      = pcout0 - (sel ? a : b)
     // pcout1 = z
-    dspfp32_add_ip#(D_LATENCY: 1, C_LATENCY: 1, FPOP_LATENCY: 1) x1
+    dspfp32_add_ip#(D_LATENCY: 1, C_LATENCY: 1, FPOP_LATENCY: 0) x1
     x1.d = b
     x1.c = a
     x1.pcin = pcout0
@@ -618,7 +618,7 @@ module TwoSum2 {
     float pcout1 = x1.pcout
 
     // rl = (sel ? b : a) - pcout1
-    dspfp32_full#(A_REGS: 0, B_REGS: 0, C_REGS: 2, D_REGS: 0, M_REGS: 2, OP_REGS: 2, ACIN: 0, PCOUT_FPA: 1) dsp2
+    dspfp32_full#(A_REGS: 0, B_REGS: 0, C_REGS: 2, D_REGS: 0, M_REGS: 2, OP_REGS: 1, ACIN: 0, PCOUT_FPA: 1) dsp2
     bool[7] fpopmode = C_MINUS_PC
     when sel {
         fpopmode = M_MINUS_PC
