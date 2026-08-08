@@ -184,7 +184,7 @@ module FPPlusFP {
     output float rh
     output float rl
 
-    TwoSum2 r
+    TwoSum r
     r.a = x
     r.b = y
 
@@ -202,7 +202,7 @@ module DWPlusFP {
     output float rh
     output float rl
 
-    TwoSum2 s
+    TwoSum s
     s.a = xh
     s.b = y
     float sh = s.rh
@@ -240,7 +240,7 @@ module DWPlusDW_Sloppy {
     output float rh
     output float rl
 
-    TwoSum2 s
+    TwoSum s
     s.a = xh
     s.b = yh
     float sh   = s.rh
@@ -287,7 +287,7 @@ module DWPlusDW_Accurate {
     output float rh
     output float rl
 
-    TwoSum2 s
+    TwoSum s
     s.a = xh
     s.b = yh
     float sh = s.rh
@@ -295,7 +295,7 @@ module DWPlusDW_Accurate {
     float _shc = s.rhc
     float slc = s.rlc
 
-    TwoSum2 t
+    TwoSum t
     t.a = xl
     t.b = yl
     float th = t.rh
@@ -527,7 +527,7 @@ module DWTimesDW_Fast {
 // ##  Building Blocks  ###########################################
 // ################################################################
 
-module TwoSum2 {
+module TwoSum {
     clock aclk
 
     input float a'0
