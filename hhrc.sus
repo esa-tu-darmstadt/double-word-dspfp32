@@ -391,20 +391,23 @@ module DWTimesFP_Fast {
     float f_b = cl3
     float f_bc = cl3c
 
-    dspfp32_mul_a_b_add_c_pcin#(A_REGS: 1, B_REGS: 0, C_REGS: 1) fa_dsp0
-    float f_a2 = dsp0.fpm_out
-    fa_dsp0.mul(f_a, 1.0)
-    fa_dsp0.add(f_a2, f_bc)
-    float r_hc = fa_dsp0.pcout
-    float f_rh = fa_dsp0.fpa_out
+    // f_rh = f_a + f_b
+    dspfp32_mac_a_b_pcin#(A_REGS: 2, B_REGS: 0) fa_dsp0
+    fa_dsp0.apply(f_a, 1.0, f_bc)
+    float f_rhc = fa_dsp0.pcout
+    float f_rh  = fa_dsp0.fpa_out
+    float f_a2  = fa_dsp0.acout
 
-    dspfp32_add_nc_pcin#(C_REGS: 2) fa_dsp1
-    fa_dsp1.apply(f_a2, r_hc)
+    // f_z = f_rh - f_a
+    dspfp32_mac_acin_b_pcin#(A_REGS: 1, B_REGS: 0) fa_dsp1
+    fa_dsp1.apply(f_a2, -1.0, f_rhc)
     float f_z = fa_dsp1.pcout
 
+    // f_rl = f_b - f_z
     dspfp32_add_c_npcin#(C_REGS: 2) fa_dsp2
     fa_dsp2.apply(f_b, f_z)
     float f_rl = fa_dsp2.fpa_out
+    // ################################
 
     rh = f_rh
     rl = f_rl
@@ -522,20 +525,23 @@ module DWTimesDW_Fast {
     float f_b = cl3
     float f_bc = cl3c
 
-    dspfp32_mul_a_b_add_c_pcin#(A_REGS: 1, B_REGS: 0, C_REGS: 1) fa_dsp0
-    float f_a2 = dsp0.fpm_out
-    fa_dsp0.mul(f_a, 1.0)
-    fa_dsp0.add(f_a2, f_bc)
-    float r_hc = fa_dsp0.pcout
-    float f_rh = fa_dsp0.fpa_out
+    // f_rh = f_a + f_b
+    dspfp32_mac_a_b_pcin#(A_REGS: 2, B_REGS: 0) fa_dsp0
+    fa_dsp0.apply(f_a, 1.0, f_bc)
+    float f_rhc = fa_dsp0.pcout
+    float f_rh  = fa_dsp0.fpa_out
+    float f_a2  = fa_dsp0.acout
 
-    dspfp32_add_nc_pcin#(C_REGS: 2) fa_dsp1
-    fa_dsp1.apply(f_a2, r_hc)
+    // f_z = f_rh - f_a
+    dspfp32_mac_acin_b_pcin#(A_REGS: 1, B_REGS: 0) fa_dsp1
+    fa_dsp1.apply(f_a2, -1.0, f_rhc)
     float f_z = fa_dsp1.pcout
 
+    // f_rl = f_b - f_z
     dspfp32_add_c_npcin#(C_REGS: 2) fa_dsp2
     fa_dsp2.apply(f_b, f_z)
     float f_rl = fa_dsp2.fpa_out
+    // ################################
 
     rh = f_rh
     rl = f_rl
@@ -1032,6 +1038,7 @@ module dspfp32_mac_a_b_pcin#(int A_REGS, int B_REGS) {
 
     output float fpm_out'0
     output float fpa_out'1
+    output float acout'-2
     output float bcout'-2
     output float pcout'1
 
@@ -1052,7 +1059,7 @@ module dspfp32_mac_a_b_pcin#(int A_REGS, int B_REGS) {
 
     fpm_out = ip.fpm_out
     fpa_out = ip.fpa_out
-    float _acout = ip.acout
+    acout = ip.acout
     bcout = ip.bcout
     pcout = ip.pcout
 }
