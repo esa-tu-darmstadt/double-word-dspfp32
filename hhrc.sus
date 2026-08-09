@@ -762,17 +762,19 @@ module TwoProd {
     float sb1_p   = sb1_dsp0.fpm_out
     float _sb1_t0 = sb1_dsp0.fpa_out
     float sb1_q   = sb1_dsp0.pcout
-    float _sb1_xc = sb1_dsp0.bcout
+    float sb1_xc  = sb1_dsp0.bcout
 
     // x1 = p + q
-    dspfp32_mul_a_b_add_c_pcin#(A_REGS: 2, B_REGS: 1, C_REGS: 1) sb1_dsp1
+    dspfp32_mul_a_d_add_c_pcin_carry_b#(A_REGS: 2, B_REGS: 1, C_REGS: 1, D_REGS: 1) sb1_dsp1
     sb1_dsp1.add(sb1_p, sb1_q)
+    sb1_dsp1.carry(sb1_xc)
     float sb1_x1  = sb1_dsp1.fpa_out
     float sb1_x1c = sb1_dsp1.pcout
+    float sb1_xcc = sb1_dsp1.bcout
 
     // x2 = x - x1
-    dspfp32_mac_a_b_npcin#(A_REGS: 2, B_REGS: 0) sb1_dsp2
-    sb1_dsp2.apply(sb1_x, 1.0, sb1_x1c)
+    dspfp32_mac_a_bcin_npcin#(A_REGS: 2, B_REGS: 1) sb1_dsp2
+    sb1_dsp2.apply(1.0, sb1_xcc, sb1_x1c)
     float sb1_x2  = sb1_dsp2.fpa_out
     float _sb1_t5 = sb1_dsp2.pcout
     float b1h = sb1_x1
@@ -853,20 +855,28 @@ extern module dspfp32_ip #(int A_REGS, int AC_REGS, int B_REGS, int C_REGS, int 
 
     clock aclk
     input float a'-(A_REGS+M_REGS)
-    input float b'-(B_REGS+M_REGS)
     input float acin'-(A_REGS+M_REGS)
-    input float bcin'-(B_REGS+M_REGS)
     input bool fpinmode'-(1+M_REGS)
     output float fpm_out'0
     output float acout'-M_REGS-A_REGS+AC_REGS
-    output float bcout'-M_REGS
 
-    domain bclk
+    domain clk1
+    input float b'0
+    input float bcin'0
+
+    domain clk2
+    output float bcout'0
+
+    domain clk3
+    input float d'0
+
+    domain clk4
     input float c'-C_REGS
-    input float d'-D_REGS
     input float pcin'0
     input bool[7] fpopmode'-OP_REGS
     output float fpa_out'1
+
+    domain clk5
     output float pcout'PCOUT_FPA
 
 }
@@ -1429,4 +1439,44 @@ module dspfp32_mul_acin_b_add_c_pcin#(int A_REGS, int B_REGS, int C_REGS) {
     }
     fpa_out = ip.fpa_out
     pcout = ip.pcout
+}
+
+module dspfp32_mul_a_d_add_c_pcin_carry_b#(int A_REGS, int B_REGS, int C_REGS, int D_REGS) {
+    dspfp32_ip#(A_REGS: A_REGS, AC_REGS: A_REGS, B_REGS: B_REGS, C_REGS: C_REGS, D_REGS: D_REGS, M_REGS: 2, OP_REGS: 0, ACIN: 0, BCIN: 1, PCOUT_FPA: 1) ip
+
+    clock aclk
+    output float fpm_out'0
+    output float acout'-2
+
+    interface mul: float a'-(A_REGS+2), float d'-(D_REGS+2) {
+        ip.a = a
+        ip.d = d
+        ip.acin = 0.0
+        ip.fpinmode = false
+        float _bcout = ip.bcout
+    }
+    fpm_out = ip.fpm_out
+    acout = ip.acout
+
+    domain bclk
+    output float fpa_out'1
+    output float pcout'1
+
+    interface add: float c'-C_REGS, float pcin'0 {
+        ip.c = c
+        ip.pcin = pcin
+        //               ++ +C  +PC
+        ip.fpopmode = 7'b00_110_10
+    }
+    fpa_out = ip.fpa_out
+    pcout = ip.pcout
+
+    domain cclk
+    output float bcout'0
+
+    interface carry: float b'-B_REGS {
+        ip.b = b
+    }
+    bcout = ip.bcout
+
 }
