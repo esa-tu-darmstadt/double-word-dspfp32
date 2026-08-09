@@ -59,7 +59,7 @@ DSPFP32 #(
     .FPBREG(B_REGS),// Pipeline stages for B inputs (0-1)
     .FPCREG(C_REGS),// Pipeline stages for C input (0-3)
     .FPDREG(D_REGS),// Pipeline stages for D inputs (0-1)
-    .FPMPIPEREG(1),// Selects the number of FPMPIPE registers (0-1)
+    .FPMPIPEREG(M_REGS == 2 ? 1 : 0),// Selects the number of FPMPIPE registers (0-1)
     .FPM_PREG(1),// Pipeline stages for FPM output (0-1)
     .FPOPMREG(OP_REGS),// Selects the length of the FPOPMODE pipeline (0-3)
     .INMODEREG(1),// Selects the number of FPINMODE registers (0-1)
