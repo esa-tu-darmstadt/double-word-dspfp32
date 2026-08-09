@@ -372,13 +372,14 @@ module DWTimesFP_Fast {
     float ch = c.rh_late
     float cl = c.rlc
 
-    dspfp32_mac_a_b_c#(A_REGS: 1, B_REGS: 1, C_REGS: 0) dsp0
-    dsp0.apply(xl, y, 0.0)
-    float cl2 = dsp0.fpa_out
-    float _t0 = dsp0.fpm_out
-    float _t1 = dsp0.pcout
+    // merged with inline FastTwoSum
+    // cl2 = x.l * y
+    dspfp32_mul_a_b_pcout_add_c_npcin#(A_REGS: 1, B_REGS: 1, C_REGS: 2) dsp0
+    dsp0.mul(xl, y)
+    float cl2 = dsp0.fpm_out
 
-    dspfp32_mul_a_b_add_c_pcin#(A_REGS: 2, B_REGS: 0, C_REGS: 2) dsp2
+    // cl3 = c.l + cl2
+    dspfp32_mul_a_b_add_c_pcin#(A_REGS: 2, B_REGS: 0, C_REGS: 3) dsp2
     float cl2m = dsp2.fpm_out
     dsp2.mul(cl2, 1.0)
     dsp2.add(cl2m, cl)
@@ -404,9 +405,8 @@ module DWTimesFP_Fast {
     float f_z = fa_dsp1.pcout
 
     // f_rl = f_b - f_z
-    dspfp32_add_c_npcin#(C_REGS: 2) fa_dsp2
-    fa_dsp2.apply(f_b, f_z)
-    float f_rl = fa_dsp2.fpa_out
+    dsp0.add(f_b, f_z)
+    float f_rl = dsp0.fpa_out
     // ################################
 
     rh = f_rh
@@ -503,15 +503,20 @@ module DWTimesDW_Fast {
     float ch = c.rh_late
     float cl = c.rlc
 
-    dspfp32_mul_a_b#(A_REGS: 1, B_REGS: 1) dsp0
-    dsp0.apply(xh, yl)
+    // merged with inline FastTwoSum
+    // tl1 = x.h * y.l
+    dspfp32_mul_a_b_pcout_add_c_npcin#(A_REGS: 1, B_REGS: 1, C_REGS: 2) dsp0
+    dsp0.mul(xh, yl)
     float tl1 = dsp0.pcout
 
+    // tl2 = x.l * y.h
+    // cl2 = tl1 + tl2
     dspfp32_mac_a_b_pcin#(A_REGS: 1, B_REGS: 1) dsp1
     dsp1.apply(xl, yh, tl1)
     float _tl2 = dsp1.fpm_out
     float cl2 = dsp1.fpa_out
 
+    // cl3 = c.l + cl2
     dspfp32_mul_a_b_add_c_pcin#(A_REGS: 2, B_REGS: 0, C_REGS: 2) dsp2
     float cl2m = dsp2.fpm_out
     dsp2.mul(cl2, 1.0)
@@ -538,9 +543,8 @@ module DWTimesDW_Fast {
     float f_z = fa_dsp1.pcout
 
     // f_rl = f_b - f_z
-    dspfp32_add_c_npcin#(C_REGS: 2) fa_dsp2
-    fa_dsp2.apply(f_b, f_z)
-    float f_rl = fa_dsp2.fpa_out
+    dsp0.add(f_b, f_z)
+    float f_rl = dsp0.fpa_out
     // ################################
 
     rh = f_rh
@@ -1360,6 +1364,38 @@ module dspfp32_mul_a_b_add_c_pcin#(int A_REGS, int B_REGS, int C_REGS) {
     }
     fpa_out = ip.fpa_out
     pcout = ip.pcout
+}
+
+module dspfp32_mul_a_b_pcout_add_c_npcin#(int A_REGS, int B_REGS, int C_REGS) {
+    dspfp32_ip#(A_REGS: A_REGS, AC_REGS: A_REGS, B_REGS: B_REGS, C_REGS: C_REGS, D_REGS: 0, M_REGS: 2, OP_REGS: 0, ACIN: 0, BCIN: 0, PCOUT_FPA: 0) ip
+
+    clock aclk
+    output float fpm_out'0
+    output float pcout'0
+
+    interface mul: float a'-(A_REGS+2), float b'-(B_REGS+2) {
+        ip.a = a
+        ip.b = b
+        ip.acin = 0.0
+        ip.bcin = 0.0
+        ip.fpinmode = true
+        float _acout = ip.acout
+        float _bcout = ip.bcout
+    }
+    fpm_out = ip.fpm_out
+    pcout = ip.pcout
+
+    domain bclk
+    output float fpa_out'1
+
+    interface add: float c'-C_REGS, float pcin'0 {
+        ip.c = c
+        ip.d = 0.0
+        ip.pcin = pcin
+        //               +- +C  -PC
+        ip.fpopmode = 7'b01_110_10
+    }
+    fpa_out = ip.fpa_out
 }
 
 module dspfp32_mul_acin_b_add_c_pcin#(int A_REGS, int B_REGS, int C_REGS) {
