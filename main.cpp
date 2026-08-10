@@ -236,7 +236,11 @@ void write_hex_file(const std::string& filename, const std::vector<float>& data)
 
 int main(int argc, char** argv) {
     if (argc < 2) {
-        std::cout << "output path missing" << std::endl;
+        // print intermediate results for just a single testcase
+        std::cout << std::setprecision(15);
+        DW x = { h: -53960.7734375, l: 3.37515783309937 };
+        DW y = { h: -83415.859375, l: -4.55084323883057 };
+        DWTimesDW_Fast(x, y);
         return 0;
     }
 
