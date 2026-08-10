@@ -765,7 +765,7 @@ module TwoProd {
     float sa1_xcc = sa1_dsp1.acout
 
     // x2 = x - x1
-    dspfp32_mac_acin_b_npcin#(A_REGS: 2, B_REGS: 0, M_REGS: 1) sa1_dsp2
+    dspfp32_mac_acin_b_npcin#(A_REGS: 1, B_REGS: 0, M_REGS: 2) sa1_dsp2
     sa1_dsp2.apply(sa1_xcc, 1.0, sa1_x1c)
     float _sa1_t4 = sa1_dsp2.fpm_out
     float sa1_x2  = sa1_dsp2.fpa_out
@@ -796,7 +796,7 @@ module TwoProd {
     float sb1_xcc = sb1_dsp1.bcout
 
     // x2 = x - x1
-    dspfp32_mac_a_bcin_npcin#(A_REGS: 0, B_REGS: 1, M_REGS: 1) sb1_dsp2
+    dspfp32_mac_a_bcin_npcin#(A_REGS: 0, B_REGS: 0, M_REGS: 2) sb1_dsp2
     sb1_dsp2.apply(1.0, sb1_xcc, sb1_x1c)
     float sb1_x2  = sb1_dsp2.fpa_out
     float _sb1_t5 = sb1_dsp2.pcout
