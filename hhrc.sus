@@ -209,8 +209,8 @@ module DWPlusFP {
     float sl = s.rl
     float slc = s.rlc
 
-    dspfp32_add_c_pcin#(C_REGS: 3) dsp0
-    dsp0.apply(xl, slc)
+    dspfp32_mac_a_b_pcin#(A_REGS: 2, B_REGS: 0, M_REGS: 2) dsp0
+    dsp0.apply(xl, 1.0, slc)
     float v = dsp0.fpa_out
     float vc = dsp0.pcout
 
@@ -253,7 +253,7 @@ module DWPlusDW_Sloppy {
     float v = dsp0.fpa_out
     float _vc = dsp0.pcout
 
-    dspfp32_add_c_pcin#(C_REGS: 1) dsp1
+    dspfp32_add_c_pcin#(C_REGS: 2) dsp1
     dsp1.apply(v, slc)
     float w = dsp1.fpa_out
     float wc = dsp1.pcout
@@ -585,8 +585,8 @@ module TwoSum {
 
     //                      -+ -C  +PC
     gen bool[7] PC_MINUS_C = 7'b10_110_10
-    //                      +- +PC -D
-    gen bool[7] PC_MINUS_D = 7'b01_111_11
+    //                      +- +PC -M
+    gen bool[7] PC_MINUS_M = 7'b01_111_01
     //                      +- +C  -PC
     gen bool[7] C_MINUS_PC = 7'b01_110_10
     //                      -+ -PC +M
@@ -594,7 +594,7 @@ module TwoSum {
 
     // rh     = a + b
     // pcout0 = rh
-    dspfp32_add_c_d#(C_REGS: 0, D_REGS: 0) dsp0
+    dspfp32_add_c_d#(C_REGS: 1, D_REGS: 1) dsp0
     dsp0.apply(a, b)
     float pcout0 = dsp0.pcout
     rh = dsp0.fpa_out
@@ -602,17 +602,18 @@ module TwoSum {
 
     // z      = pcout0 - (sel ? a : b)
     // pcout1 = z
-    dspfp32_add_c_d_pcin_op#(C_REGS: 1, D_REGS: 1, OP_REGS: 0) dsp1
-    bool[7] fpopmode0 = PC_MINUS_D
+    dspfp32_mac_a_b_add_c_pcin_op#(A_REGS: 1, B_REGS: 0, C_REGS: 2, M_REGS: 1, OP_REGS: 1) dsp1
+    bool[7] fpopmode0 = PC_MINUS_C
     when sel {
-        fpopmode0 = PC_MINUS_C
+        fpopmode0 = PC_MINUS_M
     }
-    dsp1.apply(a, b, pcout0, fpopmode0)
+    dsp1.apply(a, 1.0, b, pcout0, fpopmode0)
+    float _fpm_out1 = dsp1.fpm_out
     float _fpa_out1 = dsp1.fpa_out
     float pcout1 = dsp1.pcout
 
     // rl = (sel ? b : a) - pcout1
-    dspfp32_mac_a_b_add_c_pcin_op#(A_REGS: 0, B_REGS: 0, C_REGS: 2, M_REGS: 2, OP_REGS: 1) dsp2
+    dspfp32_mac_a_b_add_c_pcin_op#(A_REGS: 1, B_REGS: 0, C_REGS: 3, M_REGS: 2, OP_REGS: 2) dsp2
     bool[7] fpopmode1 = C_MINUS_PC
     when sel {
         fpopmode1 = M_MINUS_PC
@@ -727,7 +728,7 @@ module TwoProd {
 
     // p = x * SplitC
     // q = x - p
-    dspfp32_mac_na_b_c#(A_REGS: 0, B_REGS: 0, C_REGS: 2, M_REGS: 2) sa1_dsp0
+    dspfp32_mac_na_b_c#(A_REGS: 1, B_REGS: 1, C_REGS: 2, M_REGS: 1) sa1_dsp0
     sa1_dsp0.apply(sa1_x, SplitC, sa1_x)
     float sa1_p   = sa1_dsp0.fpm_out
     float _sa1_t0 = sa1_dsp0.fpa_out
@@ -735,14 +736,14 @@ module TwoProd {
     float sa1_xc  = sa1_dsp0.acout
 
     // x1 = p + q
-    dspfp32_mul_acin_b_add_c_pcin#(A_REGS: 1, B_REGS: 1, C_REGS: 1, M_REGS: 2) sa1_dsp1
+    dspfp32_mul_acin_b_add_c_pcin#(A_REGS: 0, B_REGS: 1, C_REGS: 1, M_REGS: 2) sa1_dsp1
     sa1_dsp1.add(sa1_p, sa1_q)
     float sa1_x1  = sa1_dsp1.fpa_out
     float sa1_x1c = sa1_dsp1.pcout
     float sa1_xcc = sa1_dsp1.acout
 
     // x2 = x - x1
-    dspfp32_mac_acin_b_npcin#(A_REGS: 1, B_REGS: 0, M_REGS: 2) sa1_dsp2
+    dspfp32_mac_acin_b_npcin#(A_REGS: 2, B_REGS: 0, M_REGS: 1) sa1_dsp2
     sa1_dsp2.apply(sa1_xcc, 1.0, sa1_x1c)
     float _sa1_t4 = sa1_dsp2.fpm_out
     float sa1_x2  = sa1_dsp2.fpa_out
@@ -757,7 +758,7 @@ module TwoProd {
 
     // p = x * SplitC
     // q = x - p
-    dspfp32_mac_na_b_c#(A_REGS: 0, B_REGS: 0, C_REGS: 2, M_REGS: 2) sb1_dsp0
+    dspfp32_mac_na_b_c#(A_REGS: 1, B_REGS: 1, C_REGS: 2, M_REGS: 1) sb1_dsp0
     sb1_dsp0.apply(SplitC, sb1_x, sb1_x)
     float sb1_p   = sb1_dsp0.fpm_out
     float _sb1_t0 = sb1_dsp0.fpa_out
@@ -773,7 +774,7 @@ module TwoProd {
     float sb1_xcc = sb1_dsp1.bcout
 
     // x2 = x - x1
-    dspfp32_mac_a_bcin_npcin#(A_REGS: 2, B_REGS: 1, M_REGS: 2) sb1_dsp2
+    dspfp32_mac_a_bcin_npcin#(A_REGS: 0, B_REGS: 1, M_REGS: 1) sb1_dsp2
     sb1_dsp2.apply(1.0, sb1_xcc, sb1_x1c)
     float sb1_x2  = sb1_dsp2.fpa_out
     float _sb1_t5 = sb1_dsp2.pcout
@@ -794,7 +795,7 @@ module TwoProd {
     // r.l = ((a1.h * b1.h - r.h) + a1.h * b1.l + a1.l * b1.h) + a1.l * b1.l;
 
     // tmp0 = a1h * b1h - rh
-    dspfp32_mac_a_b_nc#(A_REGS: 0, B_REGS: 0, C_REGS: 3, M_REGS: 2) dsp1
+    dspfp32_mac_a_b_nc#(A_REGS: 1, B_REGS: 1, C_REGS: 3, M_REGS: 1) dsp1
     dsp1.apply(a1h, b1h, rh2)
     float _t3   = dsp1.fpm_out
     float _t4   = dsp1.fpa_out
@@ -802,7 +803,7 @@ module TwoProd {
     float a1hc  = dsp1.acout
 
     // tmp1 = a1h * b1l + tmp0
-    dspfp32_mac_acin_b_pcin#(A_REGS: 1, B_REGS: 0, M_REGS: 2) dsp2
+    dspfp32_mac_acin_b_pcin#(A_REGS: 1, B_REGS: 1, M_REGS: 1) dsp2
     dsp2.apply(a1hc, b1l, tmp0)
     float tmp1 = dsp2.pcout
 
