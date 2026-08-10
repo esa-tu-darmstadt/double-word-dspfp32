@@ -794,7 +794,7 @@ module TwoProd {
     // r.l = ((a1.h * b1.h - r.h) + a1.h * b1.l + a1.l * b1.h) + a1.l * b1.l;
 
     // tmp0 = a1h * b1h - rh
-    dspfp32_mac_a_b_c#(A_REGS: 0, B_REGS: 0, C_REGS: 3, M_REGS: 2) dsp1
+    dspfp32_mac_a_b_nc#(A_REGS: 0, B_REGS: 0, C_REGS: 3, M_REGS: 2) dsp1
     dsp1.apply(a1h, b1h, rh2)
     float _t3   = dsp1.fpm_out
     float _t4   = dsp1.fpa_out
@@ -898,8 +898,8 @@ module dspfp32_add_c_d#(int C_REGS, int D_REGS) {
         ip.bcin = 0.0
         ip.pcin = 0.0
         ip.fpinmode = true
-        //               ++ +C  +PCIN
-        ip.fpopmode = 7'b00_110_10
+        //               ++ +C  +D
+        ip.fpopmode = 7'b00_110_11
     }
 
     float _fpm_out = ip.fpm_out
@@ -1107,7 +1107,7 @@ module dspfp32_mac_a_b_npcin#(int A_REGS, int B_REGS, int M_REGS) {
     pcout = ip.pcout
 }
 
-module dspfp32_mac_a_b_c#(int A_REGS, int B_REGS, int C_REGS, int M_REGS) {
+module dspfp32_mac_a_b_nc#(int A_REGS, int B_REGS, int C_REGS, int M_REGS) {
     clock aclk
 
     output float fpm_out'0
@@ -1126,8 +1126,8 @@ module dspfp32_mac_a_b_c#(int A_REGS, int B_REGS, int C_REGS, int M_REGS) {
         ip.bcin = 0.0
         ip.pcin = 0.0
         ip.fpinmode = true
-        //               ++ +C  +M
-        ip.fpopmode = 7'b00_110_01
+        //               -+ -C  +M
+        ip.fpopmode = 7'b10_110_01
     }
 
     fpm_out = ip.fpm_out
@@ -1233,7 +1233,7 @@ module dspfp32_mac_na_b_c#(int A_REGS, int B_REGS, int C_REGS, int M_REGS) {
     output float bcout'-M_REGS
     output float pcout'1
 
-    dspfp32_ip#(A_REGS: A_REGS, AC_REGS: A_REGS, B_REGS: B_REGS, C_REGS: C_REGS, D_REGS: 0, M_REGS: M_REGS, OP_REGS: 0, ACIN: 0, BCIN: 1, PCOUT_FPA: 1) ip
+    dspfp32_ip#(A_REGS: A_REGS, AC_REGS: A_REGS, B_REGS: B_REGS, C_REGS: C_REGS, D_REGS: 0, M_REGS: M_REGS, OP_REGS: 0, ACIN: 0, BCIN: 0, PCOUT_FPA: 1) ip
 
     interface apply: float a'-(A_REGS+M_REGS), float b'-(B_REGS+M_REGS), float c'-C_REGS {
         ip.a = a
@@ -1474,8 +1474,8 @@ module dspfp32_mul_a_d_add_c_pcin_carry_b#(int A_REGS, int B_REGS, int C_REGS, i
     domain cclk
     output float bcout'0
 
-    interface carry: float b'-B_REGS {
-        ip.b = b
+    interface carry: float bcin'-B_REGS {
+        ip.bcin = bcin
     }
     bcout = ip.bcout
 
