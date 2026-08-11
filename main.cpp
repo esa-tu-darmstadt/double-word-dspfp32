@@ -10,7 +10,7 @@ struct DW {
     float l;
 };
 
-static int log_level = 1;
+static int log_level = 0;
 
 void log0(const char* name) {
     if (log_level != 0) {
@@ -60,11 +60,11 @@ DW Split(float x) {
     float q = x - p;
     float x1 = p + q;
     float x2 = x - x1;
-    //log1("    SplitC", SplitC);
-    //log1("    p", p);
-    //log1("    q", q);
-    //log1("    x1", x1);
-    //log1("    x2", x2);
+    log1("    SplitC", SplitC);
+    log1("    p", p);
+    log1("    q", q);
+    log1("    x1", x1);
+    log1("    x2", x2);
     DW res;
     res.h = x1;
     res.l = x2;
@@ -76,9 +76,15 @@ DW TwoProd(float a, float b) {
     res.h = a * b;
     DW a1 = Split(a);
     DW b1 = Split(b);
-    //log2("  a1", a1);
-    //log2("  b1", b1);
-    res.l = ((a1.h * b1.h - res.h) + a1.h * b1.l + a1.l * b1.h) + a1.l * b1.l;
+    float tmp0 = a1.h * b1.h - res.h;
+    float tmp1 = tmp0 + a1.h * b1.l;
+    float tmp2 = tmp1 + a1.l * b1.h;
+    res.l = tmp2 + a1.l * b1.l;
+    log2("  a1", a1);
+    log2("  b1", b1);
+    log1("  tmp0", tmp0);
+    log1("  tmp1", tmp1);
+    log1("  tmp2", tmp2);
     return res;
 }
 
@@ -238,13 +244,13 @@ int main(int argc, char** argv) {
     if (argc < 2) {
         // print intermediate results for just a single testcase
         std::cout << std::setprecision(15);
+        log_level = 1;
         DW x = { h: -53960.7734375, l: 3.37515783309937 };
         DW y = { h: -83415.859375, l: -4.55084323883057 };
         DWTimesDW_Fast(x, y);
         return 0;
     }
 
-    std::cout << std::setprecision(15);
     std::random_device rd;
     std::mt19937 gen(rd());
     std::uniform_real_distribution<float> dist(-100000.0f, 100000.0f);
