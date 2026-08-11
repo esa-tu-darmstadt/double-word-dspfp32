@@ -845,7 +845,7 @@ module TwoProd {
     float tmp2 = dsp3.pcout
 
     // tmp3 = a1l * b1l + tmp2
-    dspfp32_mac_acin_b_pcin#(A_REGS: 1, B_REGS: 1, M_REGS: 2) dsp4
+    dspfp32_mac_acin_bcin_pcin#(A_REGS: 1, B_REGS: 1, M_REGS: 2) dsp4
     dsp4.apply(a1lc, b1lc, tmp2)
     float tmp3 = dsp4.fpa_out
     rl          = tmp3
@@ -983,7 +983,7 @@ module TwoProd_LATE_RH {
     float tmp2 = dsp3.pcout
 
     // tmp3 = a1l * b1l + tmp2
-    dspfp32_mac_acin_b_pcin#(A_REGS: 1, B_REGS: 1, M_REGS: 2) dsp4
+    dspfp32_mac_acin_bcin_pcin#(A_REGS: 1, B_REGS: 1, M_REGS: 2) dsp4
     dsp4.apply(a1lc, b1lc, tmp2)
     float tmp3 = dsp4.fpa_out
     rl          = tmp3
@@ -1327,6 +1327,35 @@ module dspfp32_mac_acin_b_pcin#(int A_REGS, int B_REGS, int M_REGS) {
         ip.d = 0.0
         ip.acin = acin
         ip.bcin = 0.0
+        ip.pcin = pcin
+        ip.fpinmode = true
+        //               ++ +PCIN +M
+        ip.fpopmode = 7'b00_111_01
+    }
+
+    fpm_out = ip.fpm_out
+    fpa_out = ip.fpa_out
+    float _acout = ip.acout
+    float _bcout = ip.bcout
+    pcout = ip.pcout
+}
+
+module dspfp32_mac_acin_bcin_pcin#(int A_REGS, int B_REGS, int M_REGS) {
+    clock aclk
+
+    output float fpm_out'0
+    output float fpa_out'1
+    output float pcout'1
+
+    dspfp32_ip#(A_REGS: A_REGS, AC_REGS: A_REGS, B_REGS: B_REGS, C_REGS: 0, D_REGS: 0, M_REGS: M_REGS, OP_REGS: 0, ACIN: 1, BCIN: 1, DCOUT: 0, PCOUT_FPA: 1) ip
+
+    interface apply: float acin'-(A_REGS+M_REGS), float bcin'-(B_REGS+M_REGS), float pcin'0 {
+        ip.a = 0.0
+        ip.b = 0.0
+        ip.c = 0.0
+        ip.d = 0.0
+        ip.acin = acin
+        ip.bcin = bcin
         ip.pcin = pcin
         ip.fpinmode = true
         //               ++ +PCIN +M
