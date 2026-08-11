@@ -8,6 +8,7 @@ module dspfp32_ip#(
     parameter OP_REGS = 0,
     parameter ACIN = 0,
     parameter BCIN = 0,
+    parameter DCOUT = 0,
     parameter PCOUT_FPA = 0
 ) (
     input logic aclk,
@@ -35,7 +36,7 @@ DSPFP32 #(
     .A_FPTYPE("B32"),// B16, B32
     .A_INPUT(ACIN == 1 ? "CASCADE" : "DIRECT"),// Selects A input source, "DIRECT" (A port) or "CASCADE" (ACIN port)
     .B_INPUT(BCIN == 1 ? "CASCADE" : "DIRECT"),// Selects B input source, "DIRECT" (B port) or "CASCADE" (BCIN port)
-    .BCASCSEL("B"),// Selects B cascade out data (B, D).
+    .BCASCSEL(DCOUT == 1 ? "D" : "B"),// Selects B cascade out data (B, D).
     .B_D_FPTYPE("B32"),// B16, B32
     .PCOUTSEL(PCOUT_FPA == 1 ? "FPA" : "FPM"),// Select PCOUT output cascade of DSPFP32 (FPA, FPM)
     .USE_MULT(M_REGS != 0 ? "MULTIPLY" : "NONE"),// Select multiplier usage (DYNAMIC, MULTIPLY, NONE)
