@@ -792,7 +792,7 @@ module TwoProd {
     float sb1_xc  = sb1_dsp0.bcout
 
     // x1 = p + q
-    dspfp32_mul_a_d_add_c_pcin_carry_b#(A_REGS: 2, B_REGS: 0, C_REGS: 1, D_REGS: 1, M_REGS: 2) sb1_dsp1
+    dspfp32_mul_a_d_add_c_pcin_carry_bcin#(A_REGS: 2, B_REGS: 0, C_REGS: 1, D_REGS: 1, M_REGS: 2) sb1_dsp1
     sb1_dsp1.add(sb1_p, sb1_q)
     sb1_dsp1.carry(sb1_xc)
     float sb1_x1  = sb1_dsp1.fpa_out
@@ -1698,7 +1698,7 @@ module dspfp32_mul_a_bcin_add_c_pcin#(int A_REGS, int B_REGS, int C_REGS, int M_
     pcout = ip.pcout
 }
 
-module dspfp32_mul_a_d_add_c_pcin_carry_b#(int A_REGS, int B_REGS, int C_REGS, int D_REGS, int M_REGS) {
+module dspfp32_mul_a_d_add_c_pcin_carry_bcin#(int A_REGS, int B_REGS, int C_REGS, int D_REGS, int M_REGS) {
     dspfp32_ip#(A_REGS: A_REGS, AC_REGS: A_REGS, B_REGS: B_REGS, C_REGS: C_REGS, D_REGS: D_REGS, M_REGS: M_REGS, OP_REGS: 0, ACIN: 0, BCIN: 1, PCOUT_FPA: 1) ip
 
     clock aclk
@@ -1732,6 +1732,7 @@ module dspfp32_mul_a_d_add_c_pcin_carry_b#(int A_REGS, int B_REGS, int C_REGS, i
     output float bcout'0
 
     interface carry: float bcin'-B_REGS {
+        ip.b = 0.0
         ip.bcin = bcin
     }
     bcout = ip.bcout
