@@ -3,6 +3,7 @@ module SUS_DWTimesDW_Fast {
     clock aclk
 
     gen int TYPE = 7
+    gen int DELAY = 8
 
     output bool                               saxis_a_tready'0 = true
     input  bool                               saxis_a_tvalid'0
@@ -30,79 +31,87 @@ module SUS_DWTimesDW_Fast {
     bool      _saxis_b_tlast  = saxis_b_tlast
     bool      _maxis_tready   = maxis_tready
 
+    bool[128] data_a
+    bool[128] data_b
+    bool[128] data_r
+
+    data_a = delay#(D: DELAY)(saxis_a_tdata)
+    data_b = delay#(D: DELAY)(saxis_b_tdata)
+    maxis_tdata = delay#(D: DELAY)(data_r)
+
     if TYPE == 0 {
         FPPlusFP inst
-        inst.x = FromBits(saxis_a_tdata[0+:32])
-        inst.y = FromBits(saxis_b_tdata[0+:32])
-        maxis_tdata[0+:32]  = ToBits(inst.rh)
-        maxis_tdata[32+:32] = ToBits(inst.rl)
-        maxis_tdata[64+:32] = ToBits(0.0)
-        maxis_tdata[96+:32] = ToBits(0.0)
+        inst.x = FromBits(data_a[0+:32])
+        inst.y = FromBits(data_b[0+:32])
+        data_r[0+:32]  = ToBits(inst.rh)
+        data_r[32+:32] = ToBits(inst.rl)
+        data_r[64+:32] = ToBits(0.0)
+        data_r[96+:32] = ToBits(0.0)
     } else if TYPE == 1 {
         DWPlusFP inst
-        inst.xh = FromBits(saxis_a_tdata[0+:32])
-        inst.xl = FromBits(saxis_a_tdata[32+:32])
-        inst.y = FromBits(saxis_b_tdata[0+:32])
-        maxis_tdata[0+:32]  = ToBits(inst.rh)
-        maxis_tdata[32+:32] = ToBits(inst.rl)
-        maxis_tdata[64+:32] = ToBits(0.0)
-        maxis_tdata[96+:32] = ToBits(0.0)
+        inst.xh = FromBits(data_a[0+:32])
+        inst.xl = FromBits(data_a[32+:32])
+        inst.y = FromBits(data_b[0+:32])
+        data_r[0+:32]  = ToBits(inst.rh)
+        data_r[32+:32] = ToBits(inst.rl)
+        data_r[64+:32] = ToBits(0.0)
+        data_r[96+:32] = ToBits(0.0)
     } else if TYPE == 2 {
         DWPlusDW_Sloppy inst
-        inst.xh = FromBits(saxis_a_tdata[0+:32])
-        inst.xl = FromBits(saxis_a_tdata[32+:32])
-        inst.yh = FromBits(saxis_b_tdata[0+:32])
-        inst.yl = FromBits(saxis_b_tdata[32+:32])
-        maxis_tdata[0+:32]  = ToBits(inst.rh)
-        maxis_tdata[32+:32] = ToBits(inst.rl)
-        maxis_tdata[64+:32] = ToBits(0.0)
-        maxis_tdata[96+:32] = ToBits(0.0)
+        inst.xh = FromBits(data_a[0+:32])
+        inst.xl = FromBits(data_a[32+:32])
+        inst.yh = FromBits(data_b[0+:32])
+        inst.yl = FromBits(data_b[32+:32])
+        data_r[0+:32]  = ToBits(inst.rh)
+        data_r[32+:32] = ToBits(inst.rl)
+        data_r[64+:32] = ToBits(0.0)
+        data_r[96+:32] = ToBits(0.0)
     } else if TYPE == 3 {
         DWPlusDW_Accurate inst
-        inst.xh = FromBits(saxis_a_tdata[0+:32])
-        inst.xl = FromBits(saxis_a_tdata[32+:32])
-        inst.yh = FromBits(saxis_b_tdata[0+:32])
-        inst.yl = FromBits(saxis_b_tdata[32+:32])
-        maxis_tdata[0+:32]  = ToBits(inst.rh)
-        maxis_tdata[32+:32] = ToBits(inst.rl)
-        maxis_tdata[64+:32] = ToBits(0.0)
-        maxis_tdata[96+:32] = ToBits(0.0)
+        inst.xh = FromBits(data_a[0+:32])
+        inst.xl = FromBits(data_a[32+:32])
+        inst.yh = FromBits(data_b[0+:32])
+        inst.yl = FromBits(data_b[32+:32])
+        data_r[0+:32]  = ToBits(inst.rh)
+        data_r[32+:32] = ToBits(inst.rl)
+        data_r[64+:32] = ToBits(0.0)
+        data_r[96+:32] = ToBits(0.0)
     } else if TYPE == 4 {
         FPTimesFP inst
-        inst.x = FromBits(saxis_a_tdata[0+:32])
-        inst.y = FromBits(saxis_b_tdata[0+:32])
-        maxis_tdata[0+:32]  = ToBits(inst.rh)
-        maxis_tdata[32+:32] = ToBits(inst.rl)
-        maxis_tdata[64+:32] = ToBits(0.0)
-        maxis_tdata[96+:32] = ToBits(0.0)
+        inst.x = FromBits(data_a[0+:32])
+        inst.y = FromBits(data_b[0+:32])
+        data_r[0+:32]  = ToBits(inst.rh)
+        data_r[32+:32] = ToBits(inst.rl)
+        data_r[64+:32] = ToBits(0.0)
+        data_r[96+:32] = ToBits(0.0)
     } else if TYPE == 5 {
         DWTimesFP_Fast inst
-        inst.xh = FromBits(saxis_a_tdata[0+:32])
-        inst.xl = FromBits(saxis_a_tdata[32+:32])
-        inst.y = FromBits(saxis_b_tdata[0+:32])
-        maxis_tdata[0+:32]  = ToBits(inst.rh)
-        maxis_tdata[32+:32] = ToBits(inst.rl)
-        maxis_tdata[64+:32] = ToBits(0.0)
-        maxis_tdata[96+:32] = ToBits(0.0)
+        inst.xh = FromBits(data_a[0+:32])
+        inst.xl = FromBits(data_a[32+:32])
+        inst.y = FromBits(data_b[0+:32])
+        data_r[0+:32]  = ToBits(inst.rh)
+        data_r[32+:32] = ToBits(inst.rl)
+        data_r[64+:32] = ToBits(0.0)
+        data_r[96+:32] = ToBits(0.0)
     } else if TYPE == 6 {
         DWTimesFP_Accurate inst
-        inst.xh = FromBits(saxis_a_tdata[0+:32])
-        inst.xl = FromBits(saxis_a_tdata[32+:32])
-        inst.y = FromBits(saxis_b_tdata[0+:32])
-        maxis_tdata[0+:32]  = ToBits(inst.rh)
-        maxis_tdata[32+:32] = ToBits(inst.rl)
-        maxis_tdata[64+:32] = ToBits(0.0)
-        maxis_tdata[96+:32] = ToBits(0.0)
+        inst.xh = FromBits(data_a[0+:32])
+        inst.xl = FromBits(data_a[32+:32])
+        inst.y = FromBits(data_b[0+:32])
+        data_r[0+:32]  = ToBits(inst.rh)
+        data_r[32+:32] = ToBits(inst.rl)
+        data_r[64+:32] = ToBits(0.0)
+        data_r[96+:32] = ToBits(0.0)
     } else if TYPE == 7 {
         DWTimesDW_Fast inst
-        inst.xh = FromBits(saxis_a_tdata[0+:32])
-        inst.xl = FromBits(saxis_a_tdata[32+:32])
-        inst.yh = FromBits(saxis_b_tdata[0+:32])
-        inst.yl = FromBits(saxis_b_tdata[32+:32])
-        maxis_tdata[0+:32]  = ToBits(inst.rh)
-        maxis_tdata[32+:32] = ToBits(inst.rl)
-        maxis_tdata[64+:32] = ToBits(0.0)
-        maxis_tdata[96+:32] = ToBits(0.0)
+        inst.xh = FromBits(data_a[0+:32])
+        inst.xl = FromBits(data_a[32+:32])
+        inst.yh = FromBits(data_b[0+:32])
+        inst.yl = FromBits(data_b[32+:32])
+        data_r[0+:32]  = ToBits(inst.rh)
+        data_r[32+:32] = ToBits(inst.rl)
+        data_r[64+:32] = ToBits(0.0)
+        data_r[96+:32] = ToBits(0.0)
     }
 
 }
@@ -1012,6 +1021,32 @@ module TwoProd_LATE_RH {
 // ################################################################
 // ##  Extern  ####################################################
 // ################################################################
+
+extern module primitive_pipeline #(int WIDTH, int DEPTH) {
+
+    assert#(C: 0 < WIDTH)
+    assert#(C: 0 < DEPTH)
+
+    clock clk
+
+    input bool[WIDTH] din'0
+    output bool[WIDTH] dout'DEPTH
+
+}
+
+module delay#(T, int D) {
+    clock clk
+
+    interface delay: T din'0 -> T dout'D {
+        if D == 0 {
+            dout = din
+        } else {
+            primitive_pipeline#(WIDTH: sizeof#(T), DEPTH: D) pipe
+            pipe.din = ToBits(din)
+            dout = FromBits(pipe.dout)
+        }
+    }
+}
 
 extern module dspfp32_ip #(int A_REGS, int AC_REGS, int B_REGS, int C_REGS, int D_REGS, int M_REGS, int OP_REGS, int ACIN, int BCIN, int DCOUT, int PCOUT_FPA) {
 
