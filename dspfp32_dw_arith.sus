@@ -757,9 +757,7 @@ module TwoProd {
     // ##  inline Split  ##############
     float sa1_x = a
 
-    gen int MANTISSA_BITS = 22
-    gen int SplitS = pow#(B: 2, E: MANTISSA_BITS / 2) + 1
-    gen float SplitC = 2049.0
+    gen float SplitC = 4097.0
 
     // p = x * SplitC
     // q = x - p

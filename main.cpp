@@ -52,9 +52,7 @@ DW TwoSum(float a, float b) {
 }
 
 DW Split(float x) {
-    int t = 22;
-    int SplitS = t / 2;
-    float SplitC = (1 << SplitS) + 1;
+    float SplitC = 4097.0f;
 
     float p = x * SplitC;
     float q = x - p;
