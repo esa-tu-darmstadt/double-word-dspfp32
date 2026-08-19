@@ -1,0 +1,77 @@
+
+module polynomial {
+
+    gen int DELAY = 2
+
+    output bool                               saxis_tready'0 = true
+    input  bool                               saxis_tvalid'0
+    input  bool[128]                          saxis_tdata'0
+    input  bool[16]                           saxis_tkeep'0
+    input  bool                               saxis_tlast'0
+
+    input  bool                               maxis_tready'0
+    output bool                               maxis_tvalid
+    output bool[128]                          maxis_tdata
+    output bool[16]                           maxis_tkeep'0 = FromBits(16'hffff)
+    output bool                               maxis_tlast'0 = false
+
+    bool[16]  _saxis_tkeep  = saxis_tkeep
+    bool      _saxis_tlast  = saxis_tlast
+    bool      _maxis_tready = maxis_tready
+
+    bool[128] data_x
+    bool[128] data_y
+
+    data_x = delay#(D: DELAY)(saxis_tdata)
+    maxis_tdata = delay#(D: DELAY)(data_y)
+
+    polynomial_ip inst
+    inst.x[0] = FromBits(data_x[0+:32])
+    inst.x[1] = FromBits(data_x[32+:32])
+    data_y[0+:32]  = ToBits(inst.y[0])
+    data_y[32+:32] = ToBits(inst.y[1])
+    inst.x_valid = saxis_tvalid
+    maxis_tvalid = inst.y_valid
+
+}
+
+
+module polynomial_ip {
+
+    input float[2] x'0
+    input bool x_valid'0
+    output float[2] y
+    output bool y_valid'234
+
+    gen int DEGREE = 10
+    gen int COEFFICIENTS = DEGREE + 1
+
+    y_valid = x_valid
+
+    split float[COEFFICIENTS][2] c
+    for int i in 0..COEFFICIENTS {
+        c[i][0] = 1.0
+        c[i][1] = 0.0001
+    }
+    state split float[COEFFICIENTS][2] tmp
+
+    tmp[0] = c[0]
+    for int i in 1..COEFFICIENTS {
+        DWTimesDW_Fast inst0
+        inst0.xh = x[0]
+        inst0.xl = x[1]
+        inst0.yh = tmp[i-1][0]
+        inst0.yl = tmp[i-1][1]
+
+        DWPlusDW_Accurate inst1
+        inst1.xh = inst0.rh
+        inst1.xl = inst0.rl
+        inst1.yh = c[i][0]
+        inst1.yl = c[i][1]
+        tmp[i][0] = inst1.rh
+        tmp[i][1] = inst1.rl
+    }
+    y[0] = tmp[COEFFICIENTS-1][0]
+    y[1] = tmp[COEFFICIENTS-1][1]
+
+}

@@ -2,12 +2,14 @@
 
 TMPDIR := /tmp/vivado_$(USER)
 TOP = SUS_DWTimesDW_Fast
+TOP = polynomial
 
 $(TMPDIR):
 	mkdir -p $(TMPDIR)
 
 FILES := 
 FILES += dspfp32_dw_arith.sus
+FILES += polynomial.sus
 
 v80/%: BIN_DIR ?= v80
 v80/%: PART := xcv80-lsva4737-2MHP-e-S
