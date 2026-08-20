@@ -1,9 +1,9 @@
 #!/bin/bash
-mkdir -p zip
+mkdir -p build/zip
 
 TOPS=(FPPlusFP DWPlusFP DWPlusDW_Sloppy DWPlusDW_Accurate FPTimesFP DWTimesFP_Fast DWTimesFP_Accurate DWTimesDW_Fast)
 for TOP in "${TOPS[@]}"; do
-	rm -rf ipxact/
+	rm -rf build/ipxact/
 	python3 ipxact.py -f build/SUS_$TOP.sv
-	mv ipxact/SUS_$TOP.zip zip/
+	mv build/ipxact/SUS_$TOP.zip build/zip/
 done
