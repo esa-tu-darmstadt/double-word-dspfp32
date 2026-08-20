@@ -18,16 +18,16 @@ The resulting modules can be found in `build/`.
 
 Since the DSPFP32 available on Versal only support FP32 mul and add, this collection is limited to the double-word algorithms only using these operations.
 
-| Operation   | FMAX | FF   | LUT  | DSP | Name in Joldes et al. 2017     | 
-| ----------- | ---- | ---- | ---- | --- | ------------------------------ |
-| FP **+** FP |  570 |      |      |  10 | Algorithm 4 ()         |
-| DW **+** FP |  570 |      |      |  10 | Algorithm 4 (DWPlusFP)         |
-| DW **+** DW |  570 |      |      |  11 | Algorithm 5 (SloppyDWPlusDW)   |
-| DW **+** DW |  570 |  128 |   32 |  20 | Algorithm 6 (AccurateDWPlusDW) |
-| FP **x** FP |  570 |      |      |  29 | Algorithm 7 ()       |
-| DW **x** FP |  570 |      |      |  29 | Algorithm 7 (DWTimesFP1)       |
-| DW **x** FP |  570 |      |      |  23 | Algorithm 8 (DWTimesFP2)       |
-| DW **x** DW |  570 |      |      |  28 | Algorithm 10 (DWTimesDW1)      |
+| Operation   | FMAX |  L | FF   | LUT  | DSP | Name in Joldes et al. 2017     |
+| ----------- | ---- | -- | ---- | ---- | --- | ------------------------------ |
+| FP **+** FP |  570 |  4 |    1 |    4 |   3 | Algorithm 2 (2Sum)             |
+| DW **+** FP |  570 |  8 |    1 |    4 |   7 | Algorithm 4 (DWPlusFP)         |
+| DW **+** DW |  570 |  8 |    1 |    4 |   8 | Algorithm 5 (SloppyDWPlusDW)   |
+| DW **+** DW |  570 | 12 |    1 |    8 |  14 | Algorithm 6 (AccurateDWPlusDW) |
+| FP **x** FP |  570 | 10 |    0 |    0 |  10 | Algorithm 3 (2Prod)            |
+| DW **x** FP |  570 | 14 |    0 |    0 |  14 | Algorithm 7 (DWTimesFP1)       |
+| DW **x** FP |  570 | 14 |    0 |    0 |  17 | Algorithm 8 (DWTimesFP2)       |
+| DW **x** DW |  570 | 14 |    0 |    0 |  15 | Algorithm 10 (DWTimesDW1)      |
 
 DW: Double-word, FP: Floating-point
 
