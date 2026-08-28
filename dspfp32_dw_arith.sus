@@ -1016,6 +1016,64 @@ module TwoProd_LATE_RH {
     */
 }
 
+module FmaTwoProd {
+    clock aclk
+
+    input float a'0
+    input float b'0
+
+    output float rh
+    output float rl
+
+    bool a_sign = a[31]
+    bool b_sign = b[31]
+    int#(FROM: -128: TO: 127) a_exp = fromBits(a[23+:8])
+    int#(FROM: -128: TO: 127) b_exp = fromBits(b[23+:8])
+    bool[24] a_mantissa = { 1'b1, a[0+:23] }
+    bool[24] b_mantissa = { 1'b1, b[0+:23] }
+
+    dsp58_mul_a_b#(A_REGS: 1, B_REGS: 1, M_REGS: 1) dsp0
+    dsp0.mul(a_mantissa, b_mantissa)
+    bool[24] rh_mantissa = dsp0.p[24+:24]
+    bool[24] rh_remainder = dsp0.p[0+:24]
+
+    bool[24] shift_multiplier = 0
+    bool[5] shift = 0
+
+    bool found = false;
+    for int i in 0..24 {
+        shift_multiplier[i] = !found && rh_remainder[23-i]
+        if !found && rh_remainder[23-i] {
+            found = true
+            shift = i;
+        }
+    }
+
+    dsp58_mul_a_b#(A_REGS: 1, B_REGS: 1, M_REGS: 1) dsp1
+    dsp1.mul(rh_remainder, shift_m)
+    bool[24] rl_mantissa = dsp1.p[0+:24]
+
+    bool sign = a_sign ^ b_sign;
+    bool subnormal = a_exp == -128 || b_exp == -128
+    int rh_exp = a_exp + b_exp;
+    int rl_exp = rh_exp - 24 + shift;
+    if rh_exp > 127 {
+        rh_exp = 127
+    } else if subnormal && rh_exp < -128 {
+        rh_exp = -128
+    }
+    if !found || subnormal || rl_exp < -128 {
+        rl_exp = -128
+    }
+
+    bool[32] rh_b = { sign, rh_exp, rh_mantissa[0:+23] }
+    bool[32] rl_b = { sign, rl_exp, rl_mantissa[0:+23] }
+
+    rh = fromBits(rh_b)
+    rl = fromBits(rl_b)
+
+}
+
 // ################################################################
 // ##  Extern  ####################################################
 // ################################################################
@@ -1045,6 +1103,38 @@ module delay#(T, int D) {
         }
     }
 }
+
+// ################################################################
+
+extern module dsp58_ip #(int A_REGS, int B_REGS, int M_REGS) {
+
+    assert#(C: 0 <= A_REGS & A_REGS <= 1)
+    assert#(C: 0 <= B_REGS & B_REGS <= 1)
+    assert#(C: 0 <= M_REGS & M_REGS <= 1)
+
+    clock aclk
+    input bool[34] a'-(A_REGS+M_REGS)
+    input bool[24] b'-(B_REGS+M_REGS)
+    output bool[58] p'1
+
+}
+
+module dsp58_mul_a_b#(int A_REGS, int B_REGS, int M_REGS) {
+    clock aclk
+
+    output bool[58] p'1
+
+    dsp58_ip#(A_REGS: A_REGS, B_REGS: B_REGS, M_REGS: M_REGS) ip
+
+    interface mul: bool[24] a'-(A_REGS+M_REGS), bool[24] b'-(B_REGS+M_REGS) {
+        ip.a = a
+        ip.b = b
+    }
+
+    p = ip.p
+}
+
+// ################################################################
 
 extern module dspfp32_ip #(int A_REGS, int AC_REGS, int B_REGS, int C_REGS, int D_REGS, int M_REGS, int OP_REGS, int ACIN, int BCIN, int DCOUT, int PCOUT_FPA) {
 
