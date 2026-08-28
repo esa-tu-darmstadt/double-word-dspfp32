@@ -357,7 +357,7 @@ module FPTimesFP {
     output float rh
     output float rl
 
-    TwoProd_LATE_RH r
+    FmaTwoProd r
     r.a = x
     r.b = y
 
@@ -375,7 +375,7 @@ module DWTimesFP_Fast {
     output float rh
     output float rl
 
-    TwoProd_LATE_RH c
+    FmaTwoProd c
     c.a = xh
     c.b = y
     float ch = c.rh_late
@@ -442,7 +442,7 @@ module DWTimesFP_Accurate {
     output float rh
     output float rl
 
-    TwoProd c
+    FmaTwoProd c
     c.a = xh
     c.b = y
     float ch = c.rh
@@ -508,7 +508,7 @@ module DWTimesDW_Fast {
     output float rh
     output float rl
 
-    TwoProd_LATE_RH c
+    FmaTwoProd c
     c.a = xh
     c.b = yh
     float ch = c.rh_late
