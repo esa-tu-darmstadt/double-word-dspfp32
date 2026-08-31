@@ -361,7 +361,7 @@ module FPTimesFP {
     r.a = x
     r.b = y
 
-    rh = r.rh_late
+    rh = r.rh
     rl = r.rl
 }
 
@@ -378,8 +378,8 @@ module DWTimesFP_Fast {
     FmaTwoProd c
     c.a = xh
     c.b = y
-    float ch = c.rh_late
-    float cl = c.rlc
+    float ch = c.rh
+    float cl = c.rl
 
     // merged with inline FastTwoSum
     // cl2 = x.l * y
@@ -388,7 +388,7 @@ module DWTimesFP_Fast {
     float cl2 = dsp0.fpm_out
 
     // cl3 = c.l + cl2
-    dspfp32_mul_a_b_add_c_pcin#(A_REGS: 2, B_REGS: 0, C_REGS: 3, M_REGS: 2) dsp2
+    dspfp32_mul_a_b_add_c_d#(A_REGS: 2, B_REGS: 0, C_REGS: 3, D_REGS: 1, M_REGS: 2) dsp2
     float cl2m = dsp2.fpm_out
     dsp2.mul(cl2, 1.0)
     dsp2.add(cl2m, cl)
@@ -446,7 +446,7 @@ module DWTimesFP_Accurate {
     c.a = xh
     c.b = y
     float ch = c.rh
-    float cl = c.rlc
+    float cl = c.rl
 
     dspfp32_mul_a_b_add_c_d#(A_REGS: 1, B_REGS: 1, C_REGS: 1, D_REGS: 1, M_REGS: 2) fts_dsp0
     fts_dsp0.mul(xl, y)
@@ -472,7 +472,7 @@ module DWTimesFP_Accurate {
     float th = fts_rh
     float tl = fts_rl
 
-    dspfp32_add_c_pcin#(C_REGS: 3) dsp1
+    dspfp32_add_c_d#(C_REGS: 3, D_REGS: 1) dsp1
     dsp1.apply(tl, cl)
     float tl2 = dsp1.fpa_out
     float tl2c = dsp1.pcout
@@ -511,8 +511,8 @@ module DWTimesDW_Fast {
     FmaTwoProd c
     c.a = xh
     c.b = yh
-    float ch = c.rh_late
-    float cl = c.rlc
+    float ch = c.rh
+    float cl = c.rl
 
     // merged with inline FastTwoSum
     // tl1 = x.h * y.l
@@ -528,7 +528,7 @@ module DWTimesDW_Fast {
     float cl2 = dsp1.fpa_out
 
     // cl3 = c.l + cl2
-    dspfp32_mul_a_b_add_c_pcin#(A_REGS: 2, B_REGS: 0, C_REGS: 2, M_REGS: 2) dsp2
+    dspfp32_mul_a_b_add_c_d#(A_REGS: 2, B_REGS: 0, C_REGS: 2, D_REGS: 1, M_REGS: 2) dsp2
     float cl2m = dsp2.fpm_out
     dsp2.mul(cl2, 1.0)
     dsp2.add(cl2m, cl)
@@ -1025,52 +1025,59 @@ module FmaTwoProd {
     output float rh
     output float rl
 
-    bool a_sign = a[31]
-    bool b_sign = b[31]
-    int#(FROM: -128: TO: 127) a_exp = fromBits(a[23+:8])
-    int#(FROM: -128: TO: 127) b_exp = fromBits(b[23+:8])
-    bool[24] a_mantissa = { 1'b1, a[0+:23] }
-    bool[24] b_mantissa = { 1'b1, b[0+:23] }
+    bool[32] a_bits = ToBits(a)
+    bool[32] b_bits = ToBits(b)
+    bool a_sign = a_bits[31]
+    bool b_sign = b_bits[31]
+    int#(FROM: -128, TO: 128) a_exp = BitsToInt(a_bits[23+:8])
+    int#(FROM: -128, TO: 128) b_exp = BitsToInt(b_bits[23+:8])
+    bool[24] a_mantissa = Concat(1'b1, a_bits[0+:23])
+    bool[24] b_mantissa = Concat(1'b1, b_bits[0+:23])
 
     dsp58_mul_a_b#(A_REGS: 1, B_REGS: 1, M_REGS: 1) dsp0
     dsp0.mul(a_mantissa, b_mantissa)
     bool[24] rh_mantissa = dsp0.p[24+:24]
     bool[24] rh_remainder = dsp0.p[0+:24]
 
-    bool[24] shift_multiplier = 0
-    bool[5] shift = 0
+    bool[24] shift_multiplier = 24'b0
+    int#(FROM: 0, TO: 24) shift = 0
 
-    bool found = false;
+    bool found = false
     for int i in 0..24 {
-        shift_multiplier[i] = !found && rh_remainder[23-i]
-        if !found && rh_remainder[23-i] {
+        shift_multiplier[i] = !found & rh_remainder[23-i]
+        when !found & rh_remainder[23-i] {
             found = true
-            shift = i;
+            shift = i
         }
     }
 
     dsp58_mul_a_b#(A_REGS: 1, B_REGS: 1, M_REGS: 1) dsp1
-    dsp1.mul(rh_remainder, shift_m)
+    dsp1.mul(rh_remainder, shift_multiplier)
     bool[24] rl_mantissa = dsp1.p[0+:24]
 
-    bool sign = a_sign ^ b_sign;
-    bool subnormal = a_exp == -128 || b_exp == -128
-    int rh_exp = a_exp + b_exp;
-    int rl_exp = rh_exp - 24 + shift;
-    if rh_exp > 127 {
+    bool sign = a_sign ^ b_sign
+    bool subnormal = a_exp == -128 | b_exp == -128
+    int rh_exp = a_exp + b_exp
+    int rl_exp = rh_exp - 24 + shift
+    when rh_exp > 127 {
         rh_exp = 127
-    } else if subnormal && rh_exp < -128 {
+    } else when subnormal & rh_exp < -128 {
         rh_exp = -128
     }
-    if !found || subnormal || rl_exp < -128 {
+    when !found | subnormal | rl_exp < -128 {
         rl_exp = -128
     }
 
-    bool[32] rh_b = { sign, rh_exp, rh_mantissa[0:+23] }
-    bool[32] rl_b = { sign, rl_exp, rl_mantissa[0:+23] }
+    int#(FROM: -128, TO: 128) rh_exp2 = IntNarrow#(FROM: -128, TO: 128)(rh_exp)
+    int#(FROM: -128, TO: 128) rl_exp2 = IntNarrow#(FROM: -128, TO: 128)(rl_exp)
+    bool[23] rh_mantissa2 = rh_mantissa[0+:23]
+    bool[23] rl_mantissa2 = rl_mantissa[0+:23]
 
-    rh = fromBits(rh_b)
-    rl = fromBits(rl_b)
+    bool[32] rh_b = Concat(Concat(ToBits(sign), ToBits(rh_exp2)), rh_mantissa2)
+    bool[32] rl_b = Concat(Concat(ToBits(sign), ToBits(rl_exp2)), rl_mantissa2)
+
+    rh = FromBits(rh_b)
+    rl = FromBits(rl_b)
 
 }
 
@@ -1127,7 +1134,7 @@ module dsp58_mul_a_b#(int A_REGS, int B_REGS, int M_REGS) {
     dsp58_ip#(A_REGS: A_REGS, B_REGS: B_REGS, M_REGS: M_REGS) ip
 
     interface mul: bool[24] a'-(A_REGS+M_REGS), bool[24] b'-(B_REGS+M_REGS) {
-        ip.a = a
+        ip.a = Concat(10'b0, a)
         ip.b = b
     }
 
