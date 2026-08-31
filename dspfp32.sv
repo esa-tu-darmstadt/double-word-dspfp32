@@ -1,11 +1,14 @@
 module dsp58_ip#(
     parameter A_REGS = 0,
     parameter B_REGS = 0,
+    parameter C_REGS = 0,
     parameter M_REGS = 0
 ) (
     input logic aclk,
     input logic [33:0] a,
     input logic [23:0] b,
+    input logic [57:0] c,
+    input logic [8:0] opmode,
     output logic [57:0] p
 );
 
@@ -59,7 +62,7 @@ DSP58 #(
     .BREG(B_REGS),// Pipeline stages for B (0-2)
     .CARRYINREG(1),// Pipeline stages for CARRYIN (0-1)
     .CARRYINSELREG(1),// Pipeline stages for CARRYINSEL (0-1)
-    .CREG(1),// Pipeline stages for C (0-1)
+    .CREG(C_REGS),// Pipeline stages for C (0-1)
     .DREG(1),// Pipeline stages for D (0-1)
     .INMODEREG(1),// Pipeline stages for INMODE (0-1)
     .MREG(M_REGS),// Multiplier pipeline stages (0-1)
@@ -93,12 +96,12 @@ DSP58 #(
     .CARRYINSEL(3'b0),// 3-bit input: Carry select
     .CLK(aclk),// 1-bit input: Clock
     .INMODE(5'b0),// 5-bit input: INMODE control
-    .NEGATE(3'b0),// 3-bit input: Negates the input of the multiplier
-    .OPMODE(9'b00_000_01_01),// 9-bit input: Operation mode
+    .NEGATE(3'b000),// 3-bit input: Negates the input of the multiplier
+    .OPMODE(opmode),// 9-bit input: Operation mode
     // Data inputs: Data Ports
     .A(a),// 34-bit input: A data
     .B(b),// 24-bit input: B data
-    .C(58'b0),// 58-bit input: C data
+    .C(c),// 58-bit input: C data
     .CARRYIN(1'b0),// 1-bit input: Carry-in
     .D(27'b0),// 27-bit input: D data
     // Reset/Clock Enable inputs: Reset/Clock Enable Inputs

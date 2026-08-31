@@ -1029,8 +1029,8 @@ module FmaTwoProd {
     bool[32] b_bits = ToBits(b)
     bool a_sign = a_bits[31]
     bool b_sign = b_bits[31]
-    int#(FROM: -128, TO: 128) a_exp = BitsToInt(a_bits[23+:8])
-    int#(FROM: -128, TO: 128) b_exp = BitsToInt(b_bits[23+:8])
+    int#(FROM: 0, TO: 256) a_exp = BitsToUInt(a_bits[23+:8])
+    int#(FROM: 0, TO: 256) b_exp = BitsToUInt(b_bits[23+:8])
     bool[24] a_mantissa = Concat(a_bits[0+:23], 1'b1)
     bool[24] b_mantissa = Concat(b_bits[0+:23], 1'b1)
 
@@ -1040,14 +1040,16 @@ module FmaTwoProd {
     bool[24] rh_remainder = dsp0.p[0+:24]
 
     bool[24] shift_multiplier = 24'b0
-    int#(FROM: 0, TO: 24) shift = 0
-
+    int#(FROM: 24, TO: 48) shift = 24
+    bool[25] found_mask = 25'b0
     bool found = false
+
     for int i in 0..24 {
-        shift_multiplier[i] = !found & rh_remainder[23-i]
-        when !found & rh_remainder[23-i] {
+        found_mask[i+1] = found_mask[i] | rh_remainder[23-i]
+        shift_multiplier[i] = !found_mask[i] & rh_remainder[23-i]
+        when !found_mask[i] & rh_remainder[23-i] {
             found = true
-            shift = i
+            shift = i + 24
         }
     }
 
@@ -1056,20 +1058,25 @@ module FmaTwoProd {
     bool[24] rl_mantissa = dsp1.p[0+:24]
 
     bool sign = a_sign ^ b_sign
-    bool subnormal = a_exp == -128 | b_exp == -128
-    int rh_exp = a_exp + b_exp
-    int rl_exp = rh_exp - 24 + shift
-    when rh_exp > 127 {
-        rh_exp = 127
-    } else when subnormal & rh_exp < -128 {
-        rh_exp = -128
+    bool subnormal = a_exp == 0 | b_exp == 0
+    int rh_exp = a_exp + b_exp - 127
+    int rl_exp = rh_exp - shift
+    
+    int#(FROM: 0, TO: 256) rh_exp2
+    int#(FROM: 0, TO: 256) rl_exp2
+    when rh_exp > 255 {
+        rh_exp2 = 255
+    } else when subnormal | rh_exp < 0 {
+        rh_exp2 = 0
+    } else {
+        rh_exp2 = IntNarrow#(FROM: 0, TO: 256)(rh_exp)
     }
-    when !found | subnormal | rl_exp < -128 {
-        rl_exp = -128
+    when !found | subnormal | rl_exp < 0 {
+        rl_exp2 = 0
+    } else {
+        rl_exp2 = IntNarrow#(FROM: 0, TO: 256)(rl_exp)
     }
 
-    int#(FROM: -128, TO: 128) rh_exp2 = IntNarrow#(FROM: -128, TO: 128)(rh_exp)
-    int#(FROM: -128, TO: 128) rl_exp2 = IntNarrow#(FROM: -128, TO: 128)(rl_exp)
     bool[23] rh_mantissa2 = rh_mantissa[0+:23]
     bool[23] rl_mantissa2 = rl_mantissa[0+:23]
 
@@ -1113,7 +1120,7 @@ module delay#(T, int D) {
 
 // ################################################################
 
-extern module dsp58_ip #(int A_REGS, int B_REGS, int M_REGS) {
+extern module dsp58_ip #(int A_REGS, int B_REGS, int C_REGS, int M_REGS) {
 
     assert#(C: 0 <= A_REGS & A_REGS <= 1)
     assert#(C: 0 <= B_REGS & B_REGS <= 1)
@@ -1122,6 +1129,8 @@ extern module dsp58_ip #(int A_REGS, int B_REGS, int M_REGS) {
     clock aclk
     input bool[34] a'-(A_REGS+M_REGS)
     input bool[24] b'-(B_REGS+M_REGS)
+    input bool[58] c'-(C_REGS)
+    input bool[9] opmode'0
     output bool[58] p'1
 
 }
@@ -1131,11 +1140,13 @@ module dsp58_mul_a_b#(int A_REGS, int B_REGS, int M_REGS) {
 
     output bool[58] p'1
 
-    dsp58_ip#(A_REGS: A_REGS, B_REGS: B_REGS, M_REGS: M_REGS) ip
+    dsp58_ip#(A_REGS: A_REGS, B_REGS: B_REGS, C_REGS: 1, M_REGS: M_REGS) ip
 
     interface mul: bool[24] a'-(A_REGS+M_REGS), bool[24] b'-(B_REGS+M_REGS) {
         ip.a = Concat(a, 10'b0)
-        ip.b = b
+        ip.b = Concat(b[0+:23], 1'b0)
+        ip.c = Concat(Concat(23'b0, a), 11'b0)
+        ip.opmode = 9'b11_000_01_01
     }
 
     p = ip.p
