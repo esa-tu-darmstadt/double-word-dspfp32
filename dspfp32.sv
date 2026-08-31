@@ -83,26 +83,26 @@ DSP58 #(
     .P(p),// 58-bit output: Primary data
     .XOROUT(),// 8-bit output: XOR data
     // Cascade inputs: Cascade Ports
-    .ACIN(0),// 34-bit input: A cascade data
-    .BCIN(0),// 24-bit input: B cascade
-    .CARRYCASCIN(0),// 1-bit input: Cascade carry
-    .MULTSIGNIN(0),// 1-bit input: Multiplier sign cascade
-    .PCIN(0),// 58-bit input: P cascade
+    .ACIN(34'b0),// 34-bit input: A cascade data
+    .BCIN(24'b0),// 24-bit input: B cascade
+    .CARRYCASCIN(1'b0),// 1-bit input: Cascade carry
+    .MULTSIGNIN(1'b0),// 1-bit input: Multiplier sign cascade
+    .PCIN(58'b0),// 58-bit input: P cascade
     // Control inputs: Control Inputs/Status Bits
-    .ALUMODE(0),// 4-bit input: ALU control
-    .CARRYINSEL(0),// 3-bit input: Carry select
+    .ALUMODE(4'b0),// 4-bit input: ALU control
+    .CARRYINSEL(3'b0),// 3-bit input: Carry select
     .CLK(aclk),// 1-bit input: Clock
-    .INMODE(0),// 5-bit input: INMODE control
-    .NEGATE(0),// 3-bit input: Negates the input of the multiplier
-    .OPMODE(0),// 9-bit input: Operation mode
+    .INMODE(5'b0),// 5-bit input: INMODE control
+    .NEGATE(3'b0),// 3-bit input: Negates the input of the multiplier
+    .OPMODE(9'b00_000_01_01),// 9-bit input: Operation mode
     // Data inputs: Data Ports
     .A(a),// 34-bit input: A data
     .B(b),// 24-bit input: B data
-    .C(0),// 58-bit input: C data
-    .CARRYIN(0),// 1-bit input: Carry-in
-    .D(0),// 27-bit input: D data
+    .C(58'b0),// 58-bit input: C data
+    .CARRYIN(1'b0),// 1-bit input: Carry-in
+    .D(27'b0),// 27-bit input: D data
     // Reset/Clock Enable inputs: Reset/Clock Enable Inputs
-    .ASYNC_RST(0),// 1-bit input: Asynchronous reset for all registers.
+    .ASYNC_RST(1'b0),// 1-bit input: Asynchronous reset for all registers.
     .CEA1(1'b1),// 1-bit input: Clock enable for 1st stage AREG
     .CEA2(1'b1),// 1-bit input: Clock enable for 2nd stage AREG
     .CEAD(1'b1),// 1-bit input: Clock enable for ADREG
@@ -193,9 +193,9 @@ DSPFP32 #(
     .FPCREG(C_REGS),// Pipeline stages for C input (0-3)
     .FPDREG(D_REGS),// Pipeline stages for D inputs (0-1)
     .FPMPIPEREG(M_REGS == 2 ? 1 : 0),// Selects the number of FPMPIPE registers (0-1)
-    .FPM_PREG(1),// Pipeline stages for FPM output (0-1)
+    .FPM_PREG(M_REGS != 0 ? 1 : 0),// Pipeline stages for FPM output (0-1)
     .FPOPMREG(OP_REGS),// Selects the length of the FPOPMODE pipeline (0-3)
-    .INMODEREG(1),// Selects the number of FPINMODE registers (0-1)
+    .INMODEREG(M_REGS != 0 ? 1 : 0),// Selects the number of FPINMODE registers (0-1)
     .RESET_MODE("SYNC")// Selection of synchronous or asynchronous reset. (ASYNC, SYNC).
 ) DSPFP32_inst (
     // Cascade outputs: Cascade Ports
