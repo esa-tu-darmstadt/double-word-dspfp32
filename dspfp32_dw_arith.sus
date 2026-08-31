@@ -1043,8 +1043,23 @@ module FmaTwoProd {
     int#(FROM: 24, TO: 48) shift = 24
     bool[25] found_mask = 25'b0
     bool found = false
+    int#(FROM: 0, TO: 2) rh_shift = 0
 
-    for int i in 0..24 {
+    bool[24] rh_mantissa2
+    when rh_mantissa[23] {
+        found_mask[1] = rh_remainder[23]
+        shift_multiplier[0] = rh_remainder[23]
+        when rh_remainder[23] {
+            found = true
+            shift = 24
+        }
+        rh_mantissa2 = rh_mantissa
+        rh_shift = 1
+    } else {
+        rh_mantissa2 = Concat(rh_remainder[23+:1], rh_mantissa[0+:23])
+    }
+
+    for int i in 1..24 {
         found_mask[i+1] = found_mask[i] | rh_remainder[23-i]
         shift_multiplier[i] = !found_mask[i] & rh_remainder[23-i]
         when !found_mask[i] & rh_remainder[23-i] {
@@ -1059,7 +1074,7 @@ module FmaTwoProd {
 
     bool sign = a_sign ^ b_sign
     bool subnormal = a_exp == 0 | b_exp == 0
-    int rh_exp = a_exp + b_exp - 127
+    int rh_exp = a_exp + b_exp - 127 + rh_shift
     int rl_exp = rh_exp - shift
     
     int#(FROM: 0, TO: 256) rh_exp2
@@ -1077,10 +1092,10 @@ module FmaTwoProd {
         rl_exp2 = IntNarrow#(FROM: 0, TO: 256)(rl_exp)
     }
 
-    bool[23] rh_mantissa2 = rh_mantissa[0+:23]
+    bool[23] rh_mantissa3 = rh_mantissa2[0+:23]
     bool[23] rl_mantissa2 = rl_mantissa[0+:23]
 
-    bool[32] rh_b = Concat(Concat(rh_mantissa2, ToBits(rh_exp2)), ToBits(sign))
+    bool[32] rh_b = Concat(Concat(rh_mantissa3, ToBits(rh_exp2)), ToBits(sign))
     bool[32] rl_b = Concat(Concat(rl_mantissa2, ToBits(rl_exp2)), ToBits(sign))
 
     rh = FromBits(rh_b)
