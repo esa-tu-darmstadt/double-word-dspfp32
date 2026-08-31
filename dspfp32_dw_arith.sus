@@ -1031,8 +1031,8 @@ module FmaTwoProd {
     bool b_sign = b_bits[31]
     int#(FROM: -128, TO: 128) a_exp = BitsToInt(a_bits[23+:8])
     int#(FROM: -128, TO: 128) b_exp = BitsToInt(b_bits[23+:8])
-    bool[24] a_mantissa = Concat(1'b1, a_bits[0+:23])
-    bool[24] b_mantissa = Concat(1'b1, b_bits[0+:23])
+    bool[24] a_mantissa = Concat(a_bits[0+:23], 1'b1)
+    bool[24] b_mantissa = Concat(b_bits[0+:23], 1'b1)
 
     dsp58_mul_a_b#(A_REGS: 1, B_REGS: 1, M_REGS: 1) dsp0
     dsp0.mul(a_mantissa, b_mantissa)
@@ -1073,8 +1073,8 @@ module FmaTwoProd {
     bool[23] rh_mantissa2 = rh_mantissa[0+:23]
     bool[23] rl_mantissa2 = rl_mantissa[0+:23]
 
-    bool[32] rh_b = Concat(Concat(ToBits(sign), ToBits(rh_exp2)), rh_mantissa2)
-    bool[32] rl_b = Concat(Concat(ToBits(sign), ToBits(rl_exp2)), rl_mantissa2)
+    bool[32] rh_b = Concat(Concat(rh_mantissa2, ToBits(rh_exp2)), ToBits(sign))
+    bool[32] rl_b = Concat(Concat(rl_mantissa2, ToBits(rl_exp2)), ToBits(sign))
 
     rh = FromBits(rh_b)
     rl = FromBits(rl_b)
@@ -1134,7 +1134,7 @@ module dsp58_mul_a_b#(int A_REGS, int B_REGS, int M_REGS) {
     dsp58_ip#(A_REGS: A_REGS, B_REGS: B_REGS, M_REGS: M_REGS) ip
 
     interface mul: bool[24] a'-(A_REGS+M_REGS), bool[24] b'-(B_REGS+M_REGS) {
-        ip.a = Concat(10'b0, a)
+        ip.a = Concat(a, 10'b0)
         ip.b = b
     }
 
