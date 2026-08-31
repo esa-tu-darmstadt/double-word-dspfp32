@@ -27,7 +27,7 @@ test_data:
 test_bench:
 	mkdir -p $(BIN_DIR)
 	sus_compiler dspfp32_dw_arith.sus -o build/testbench.sv --top testbench
-	cp testbench.sv done/testbench_top.sv
+	cp testbench.sv build/testbench_top.sv
 	cat build/testbench.sv >> build/testbench_top.sv
 	cat dspfp32.sv >> build/testbench_top.sv
 
