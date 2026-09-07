@@ -388,10 +388,8 @@ module DWTimesFP_Fast {
     float cl2 = dsp0.fpm_out
 
     // cl3 = c.l + cl2
-    dspfp32_mul_a_b_add_c_d#(A_REGS: 2, B_REGS: 0, C_REGS: 3, D_REGS: 1, M_REGS: 2) dsp2
-    float cl2m = dsp2.fpm_out
-    dsp2.mul(cl2, 1.0)
-    dsp2.add(cl2m, cl)
+    dspfp32_mac_a_b_c#(A_REGS: 2, B_REGS: 0, C_REGS: 1, M_REGS: 2) dsp2
+    dsp2.apply(cl2, 1.0, cl)
     float cl3c = dsp2.pcout
     float cl3 = dsp2.fpa_out
 
@@ -402,14 +400,16 @@ module DWTimesFP_Fast {
     float f_bc = cl3c
 
     // f_rh = f_a + f_b
-    dspfp32_add_c_pcin#(C_REGS: 1) fa_dsp0
-    fa_dsp0.apply(f_a, f_bc)
+    dspfp32_mul_a_b_add_c_pcin#(A_REGS: 2, B_REGS: 0, C_REGS: 1, M_REGS: 2) fa_dsp0
+    fa_dsp0.mul(f_a, 1.0)
+    float f_a2 = fa_dsp0.fpm_out
+    fa_dsp0.add(f_a2, f_bc)
     float f_rhc = fa_dsp0.pcout
     float f_rh  = fa_dsp0.fpa_out
 
     // f_z = f_rh - f_a
     dspfp32_mul_a_b_add_nc_pcin#(A_REGS: 1, B_REGS: 0, C_REGS: 2, M_REGS: 1) fa_dsp1
-    fa_dsp1.add(f_a, f_rhc)
+    fa_dsp1.add(f_a2, f_rhc)
     float f_z = fa_dsp1.pcout
     // use free multiplier for delay
     fa_dsp1.mul(f_rh, 1.0)
@@ -466,18 +466,18 @@ module DWTimesFP_Accurate {
 
     dspfp32_add_c_npcin#(C_REGS: 3) fts_dsp2
     fts_dsp2.apply(fts_b, fts_z)
-    float _fts_rlc = fts_dsp2.pcout
-    float fts_rl   = fts_dsp2.fpa_out
+    float fts_rlc = fts_dsp2.pcout
+    float _fts_rl = fts_dsp2.fpa_out
     // ################################
     float th = fts_rh
-    float tl = fts_rl
+    float tl = fts_rlc
 
-    dspfp32_add_c_d#(C_REGS: 3, D_REGS: 1) dsp1
-    dsp1.apply(tl, cl)
+    dspfp32_add_c_pcin#(C_REGS: 1) dsp1
+    dsp1.apply(cl, tl)
     float tl2 = dsp1.fpa_out
     float tl2c = dsp1.pcout
 
-    FastTwoSum#(A_LATENCY: 6, LATE_RH: true) r
+    FastTwoSum#(A_LATENCY: 3, LATE_RH: true) r
     r.a = th
     r.b = tl2
     r.bc = tl2c
@@ -528,10 +528,8 @@ module DWTimesDW_Fast {
     float cl2 = dsp1.fpa_out
 
     // cl3 = c.l + cl2
-    dspfp32_mul_a_b_add_c_d#(A_REGS: 2, B_REGS: 0, C_REGS: 2, D_REGS: 1, M_REGS: 2) dsp2
-    float cl2m = dsp2.fpm_out
-    dsp2.mul(cl2, 1.0)
-    dsp2.add(cl2m, cl)
+    dspfp32_add_c_d#(C_REGS: 3, D_REGS: 1) dsp2
+    dsp2.apply(cl2, cl)
     float cl3c = dsp2.pcout
     float cl3  = dsp2.fpa_out
 
@@ -542,14 +540,16 @@ module DWTimesDW_Fast {
     float f_bc = cl3c
 
     // f_rh = f_a + f_b
-    dspfp32_add_c_pcin#(C_REGS: 1) fa_dsp0
-    fa_dsp0.apply(f_a, f_bc)
+    dspfp32_mul_a_b_add_c_pcin#(A_REGS: 2, B_REGS: 0, C_REGS: 1, M_REGS: 2) fa_dsp0
+    fa_dsp0.mul(f_a, 1.0)
+    float f_a2 = fa_dsp0.fpm_out
+    fa_dsp0.add(f_a2, f_bc)
     float f_rhc = fa_dsp0.pcout
     float f_rh  = fa_dsp0.fpa_out
 
     // f_z = f_rh - f_a
     dspfp32_mul_a_b_add_nc_pcin#(A_REGS: 1, B_REGS: 0, C_REGS: 2, M_REGS: 1) fa_dsp1
-    fa_dsp1.add(f_a, f_rhc)
+    fa_dsp1.add(f_a2, f_rhc)
     float f_z = fa_dsp1.pcout
     // use free multiplier for delay
     fa_dsp1.mul(f_rh, 1.0)
@@ -1427,6 +1427,37 @@ module dspfp32_mac_a_b_npcin#(int A_REGS, int B_REGS, int M_REGS) {
         ip.fpinmode = true
         //               -+ -PCIN +M
         ip.fpopmode = 7'b10_111_01
+    }
+
+    fpm_out = ip.fpm_out
+    fpa_out = ip.fpa_out
+    acout = ip.acout
+    bcout = ip.bcout
+    pcout = ip.pcout
+}
+
+module dspfp32_mac_a_b_c#(int A_REGS, int B_REGS, int C_REGS, int M_REGS) {
+    clock aclk
+
+    output float fpm_out'0
+    output float fpa_out'1
+    output float acout'-M_REGS
+    output float bcout'-M_REGS
+    output float pcout'1
+
+    dspfp32_ip#(A_REGS: A_REGS, AC_REGS: A_REGS, B_REGS: B_REGS, C_REGS: C_REGS, D_REGS: 0, M_REGS: M_REGS, OP_REGS: 0, ACIN: 0, BCIN: 0, DCOUT: 0, PCOUT_FPA: 1) ip
+
+    interface apply: float a'-(A_REGS+M_REGS), float b'-(B_REGS+M_REGS), float c'-C_REGS {
+        ip.a = a
+        ip.b = b
+        ip.c = c
+        ip.d = 0.0
+        ip.acin = 0.0
+        ip.bcin = 0.0
+        ip.pcin = 0.0
+        ip.fpinmode = true
+        //               ++ +C  +M
+        ip.fpopmode = 7'b00_110_01
     }
 
     fpm_out = ip.fpm_out
