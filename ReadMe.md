@@ -29,10 +29,10 @@ Since the DSPFP32 available on Versal only support FP32 mul and add, this collec
 | DW **x** FP |  570 | 14 |    0 |    0 |  17 | Algorithm 8 (DWTimesFP2)       |
 | DW **x** DW |  570 | 14 |    0 |    0 |  15 | Algorithm 10 (DWTimesDW1)      |
 | "FMA"       |      |    |      |      |     |                                |
-| FP **x** FP |  453 |  6 |  103 |   85 |   2 | Algorithm 3 (2Prod)            |
-| DW **x** FP |  453 | 14 |  158 |  134 |   6 | Algorithm 7 (DWTimesFP1)       |
-| DW **x** FP |  453 | 14 |  134 |  113 |   9 | Algorithm 8 (DWTimesFP2)       |
-| DW **x** DW |  453 | 14 |  158 |  128 |   7 | Algorithm 10 (DWTimesDW1)      |
+| FP **x** FP |  450 |  6 |  103 |   85 |   2 | Algorithm 3 (2Prod)            |
+| DW **x** FP |  450 | 11 |  114 |   92 |   6 | Algorithm 7 (DWTimesFP1)       |
+| DW **x** FP |  450 | 11 |  107 |   94 |   9 | Algorithm 8 (DWTimesFP2)       |
+| DW **x** DW |  450 | 11 |  112 |   88 |   7 | Algorithm 10 (DWTimesDW1)      |
 
 DW: Double-word, FP: Floating-point
 
