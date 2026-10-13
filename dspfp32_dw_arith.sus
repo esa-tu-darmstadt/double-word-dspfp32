@@ -443,25 +443,27 @@ module DWTimesFP_Accurate {
     c.a = xh
     c.b = y
     float ch = c.rh
+    float chc = c.rhc
     float cl = c.rlc
 
-    dspfp32_mul_a_b_add_c_d#(A_REGS: 1, B_REGS: 1, C_REGS: 1, D_REGS: 1, M_REGS: 2) fts_dsp0
-    fts_dsp0.mul(xl, y)
+    // cl2 = x.l * y;
+    // fts_rh = fts_a + fts_b = ch + cl2 = x.l * y + ch
+    dspfp32_mac_a_b_pcin#(A_REGS: 1, B_REGS: 1, M_REGS: 1) fts_dsp0
+    fts_dsp0.apply(xl, y, chc)
     float cl2 = fts_dsp0.fpm_out
     // ################################
     // ##  inline FastTwoSum  #########
     float fts_a  = ch
     float fts_b  = cl2
-    fts_dsp0.add(fts_b, fts_a)
     float fts_rhc = fts_dsp0.pcout
     float fts_rh  = fts_dsp0.fpa_out
 
-    dspfp32_add_nc_pcin#(C_REGS: 2) fts_dsp1
+    dspfp32_add_nc_pcin#(C_REGS: 1) fts_dsp1
     fts_dsp1.apply(fts_a, fts_rhc)
     float fts_z   = fts_dsp1.pcout
     float _fts_t0 = fts_dsp1.fpa_out
 
-    dspfp32_add_c_npcin#(C_REGS: 3) fts_dsp2
+    dspfp32_add_c_npcin#(C_REGS: 2) fts_dsp2
     fts_dsp2.apply(fts_b, fts_z)
     float _fts_rlc = fts_dsp2.pcout
     float fts_rl   = fts_dsp2.fpa_out
@@ -469,12 +471,12 @@ module DWTimesFP_Accurate {
     float th = fts_rh
     float tl = fts_rl
 
-    dspfp32_add_c_pcin#(C_REGS: 3) dsp1
+    dspfp32_add_c_pcin#(C_REGS: 2) dsp1
     dsp1.apply(tl, cl)
     float tl2 = dsp1.fpa_out
     float tl2c = dsp1.pcout
 
-    FastTwoSum#(A_LATENCY: 6, LATE_RH: true) r
+    FastTwoSum#(A_LATENCY: 5, LATE_RH: true) r
     r.a = th
     r.b = tl2
     r.bc = tl2c
@@ -1221,6 +1223,37 @@ module dspfp32_mul_a_b#(int A_REGS, int B_REGS, int M_REGS) {
     float _fpa_out = ip.fpa_out
     float _acout = ip.acout
     float _bcout = ip.bcout
+    pcout = ip.pcout
+}
+
+module dspfp32_mac_a_b_c#(int A_REGS, int B_REGS, int C_REGS, int M_REGS) {
+    clock aclk
+
+    output float fpm_out'0
+    output float fpa_out'1
+    output float acout'-M_REGS
+    output float bcout'-M_REGS
+    output float pcout'1
+
+    dspfp32_ip#(A_REGS: A_REGS, AC_REGS: A_REGS, B_REGS: B_REGS, C_REGS: C_REGS, D_REGS: 0, M_REGS: M_REGS, OP_REGS: 0, ACIN: 0, BCIN: 0, DCOUT: 0, PCOUT_FPA: 1) ip
+
+    interface apply: float a'-(A_REGS+M_REGS), float b'-(B_REGS+M_REGS), float c'-(C_REGS) {
+        ip.a = a
+        ip.b = b
+        ip.c = c
+        ip.d = 0.0
+        ip.acin = 0.0
+        ip.bcin = 0.0
+        ip.pcin = 0.0
+        ip.fpinmode = true
+        //               ++ +C  +M
+        ip.fpopmode = 7'b00_110_01
+    }
+
+    fpm_out = ip.fpm_out
+    fpa_out = ip.fpa_out
+    acout = ip.acout
+    bcout = ip.bcout
     pcout = ip.pcout
 }
 
