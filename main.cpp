@@ -52,20 +52,9 @@ DW TwoSum(float a, float b) {
 }
 
 DW Split(float x) {
-    float SplitC = 4097.0f;
-
-    float p = x * SplitC;
-    float q = x - p;
-    float x1 = p + q;
-    float x2 = x - x1;
-    log1("    SplitC", SplitC);
-    log1("    p", p);
-    log1("    q", q);
-    log1("    x1", x1);
-    log1("    x2", x2);
     DW res;
-    res.h = x1;
-    res.l = x2;
+    res.h = (float) ((int) x & 0xfffff000);
+    res.l = x - res.h;
     return res;
 }
 
