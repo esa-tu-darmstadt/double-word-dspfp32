@@ -23,7 +23,7 @@ initial begin
         for (int j = 0; j < 20; j += 1) begin
             vals[j] = test_data[i+j];
         end
-        @(posedge clk);
+        repeat (1) @(posedge clk);
     end
     repeat (32) @(posedge clk);
     $finish;
