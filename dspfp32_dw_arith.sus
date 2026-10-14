@@ -357,11 +357,11 @@ module FPTimesFP {
     output float rh
     output float rl
 
-    TwoProd r
+    TwoProd_LATE_RH r
     r.a = x
     r.b = y
 
-    rh = r.rh_late
+    rh = r.rh
     rl = r.rl
 }
 
@@ -805,15 +805,15 @@ module TwoProd {
     // r.l = ((a1.h * b1.h - r.h) + a1.h * b1.l + a1.l * b1.h) + a1.l * b1.l;
 
     // tmp0 = a1h * b1h - rh
-    dspfp32_mac_a_b_npcin#(A_REGS: 1, B_REGS: 1, M_REGS: 1) dsp1
-    dsp1.apply(a1h, b1h, rh2c)
-    float tmp0 = dsp1.fpa_out
+    dspfp32_mac_a_b_nc#(A_REGS: 1, B_REGS: 1, C_REGS: 1, M_REGS: 2) dsp1
+    dsp1.apply(a1h, b1h, rh2)
+    float tmp0 = dsp1.pcout
     float a1hc = dsp1.acout
     float b1hc = dsp1.bcout
 
     // tmp1 = a1h * b1l + tmp0
-    dspfp32_mac_acin_d_c_carry_bcin#(A_REGS: 2, B_REGS: 1, C_REGS: 1, D_REGS: 1, M_REGS: 1) dsp2
-    dsp2.mac(a1hc, b1l, tmp0)
+    dspfp32_mac_acin_d_pcin_carry_bcin#(A_REGS: 2, B_REGS: 1, D_REGS: 1, M_REGS: 1) dsp2
+    dsp2.apply(a1hc, b1l, tmp0)
     dsp2.carry(b1hc)
     float tmp1 = dsp2.pcout
     float b1hcc = dsp2.bcout
@@ -832,6 +832,109 @@ module TwoProd {
     float tmp3c = dsp4.pcout
     rl          = tmp3
     rlc         = tmp3c
+
+    /*
+    two<T> res;
+    res.h = a * b;
+
+    two<T> a1 = Split(a);
+    two<T> b1 = Split(b);
+
+    // Order must be preserved to ensure the proven error bounds
+    res.l = ((a1.h * b1.h - res.h) + a1.h * b1.l + a1.l * b1.h) + a1.l * b1.l;
+    return res;
+
+    Split(float x):
+        float hi = (float) ((int) x & 0xfffff000)
+        float lo = RN(x - hi)
+        return {hi, lo};
+    */
+}
+
+module TwoProd_LATE_RH {
+    clock aclk
+
+    input float a'0
+    input float b'0
+
+    output float rh
+    output float rl
+
+    // ################################
+    // ##  inline Split  ##############
+    float sa1_x = a
+
+    // hi = (float) ((int) (x & 0xbfffff000))
+    bool[32] sa1_xb = ToBits(sa1_x)
+    bool[32] sa1_hib = Concat(12'b0, sa1_xb[12+:20])
+    float sa1_h = FromBits(sa1_hib)
+
+    // lo = x - hi
+    dspfp32_mul_a_b_pcout_add_c_nd#(A_REGS: 1, B_REGS: 1, C_REGS: 1, D_REGS: 1, M_REGS: 2) sa1_dsp1
+    sa1_dsp1.add(sa1_x, sa1_h)
+    float sa1_l  = sa1_dsp1.fpa_out
+
+    float a1h = sa1_h
+    float a1l = sa1_l
+    // ################################
+
+    // ################################
+    // ##  inline Split  ##############
+    float sb1_x = b
+
+    // hi = (float) ((int) (x & 0xbfffff000))
+    bool[32] sb1_xb = ToBits(sb1_x)
+    bool[32] sb1_hib = Concat(12'b0, sb1_xb[12+:20])
+    float sb1_h = FromBits(sb1_hib)
+
+    // lo = x - hi
+    dspfp32_mul_a_b_pcout_add_c_nd#(A_REGS: 2, B_REGS: 0, C_REGS: 1, D_REGS: 1, M_REGS: 2) sb1_dsp1
+    sb1_dsp1.add(sb1_x, sb1_h)
+    float sb1_l  = sb1_dsp1.fpa_out
+
+    float b1h = sb1_h
+    float b1l = sb1_l
+    // ################################
+
+    // use free multipliers
+    // rh = a * b
+    sa1_dsp1.mul(a, b)
+    float rh2 = sa1_dsp1.fpm_out
+    float rh2c = sa1_dsp1.pcout
+    // delay rh
+    sb1_dsp1.mul(rh2, 1.0)
+    float rh3 = sb1_dsp1.fpm_out
+    rh = rh3
+
+    // r.l = ((a1.h * b1.h - r.h) + a1.h * b1.l + a1.l * b1.h) + a1.l * b1.l;
+
+    // tmp0 = a1h * b1h - rh
+    dspfp32_mac_a_b_npcin#(A_REGS: 1, B_REGS: 1, M_REGS: 2) dsp1
+    dsp1.apply(a1h, b1h, rh2c)
+    float tmp0 = dsp1.pcout
+    float a1hc = dsp1.acout
+    float b1hc = dsp1.bcout
+
+    // tmp1 = a1h * b1l + tmp0
+    dspfp32_mac_acin_d_pcin_carry_bcin#(A_REGS: 2, B_REGS: 1, D_REGS: 1, M_REGS: 1) dsp2
+    dsp2.apply(a1hc, b1l, tmp0)
+    dsp2.carry(b1hc)
+    float tmp1 = dsp2.pcout
+    float b1hcc = dsp2.bcout
+
+    // tmp2 = a1l * b1h + tmp1
+    dspfp32_mac_a_bcin_pcin_carry_d#(A_REGS: 1, B_REGS: 1, D_REGS: 1, M_REGS: 2) dsp3
+    dsp3.apply(a1l, b1hcc, tmp1)
+    dsp3.carry(b1l)
+    float tmp2 = dsp3.pcout
+    float b1lc = dsp3.bcout
+
+    // tmp3 = a1l * b1l + tmp2
+    dspfp32_mac_a_bcin_pcin#(A_REGS: 2, B_REGS: 1, M_REGS: 2) dsp4
+    dsp4.apply(a1l, b1lc, tmp2)
+    float tmp3 = dsp4.fpa_out
+    float tmp3c = dsp4.pcout
+    rl          = tmp3
 
     /*
     two<T> res;
