@@ -772,7 +772,7 @@ module TwoProd {
 
     // ################################
     // ##  inline Split  ##############
-    float sb1_x = a
+    float sb1_x = b
 
     // hi = (float) ((int) (x & 0xbfffff000))
     bool[32] sb1_xb = ToBits(sb1_x)
@@ -781,8 +781,8 @@ module TwoProd {
 
     // lo = x - hi
     dspfp32_mul_a_b_pcout_add_c_nd#(A_REGS: 1, B_REGS: 1, C_REGS: 1, D_REGS: 1, M_REGS: 2) sb1_dsp1
-    sa1_dsp1.add(sb1_x, sb1_h)
-    float sb1_l  = sa1_dsp1.fpa_out
+    sb1_dsp1.add(sb1_x, sb1_h)
+    float sb1_l  = sb1_dsp1.fpa_out
 
     float b1h = sb1_h
     float b1l = sb1_l
@@ -1217,7 +1217,7 @@ module dspfp32_mac_acin_d_c_carry_bcin#(int A_REGS, int B_REGS, int C_REGS, int 
     output float fpa_out'1
     output float pcout'1
 
-    dspfp32_ip#(A_REGS: A_REGS, AC_REGS: A_REGS, B_REGS: B_REGS, C_REGS: C_REGS, D_REGS: D_REGS, M_REGS: M_REGS, OP_REGS: 0, ACIN: 1, BCIN: 0, DCOUT: 0, PCOUT_FPA: 1) ip
+    dspfp32_ip#(A_REGS: A_REGS, AC_REGS: A_REGS, B_REGS: B_REGS, C_REGS: C_REGS, D_REGS: D_REGS, M_REGS: M_REGS, OP_REGS: 0, ACIN: 1, BCIN: 1, DCOUT: 0, PCOUT_FPA: 1) ip
 
     interface mac: float acin'-(A_REGS+M_REGS), float d'-(D_REGS+M_REGS), float c'-(C_REGS) {
         ip.a = 0.0
@@ -1226,8 +1226,8 @@ module dspfp32_mac_acin_d_c_carry_bcin#(int A_REGS, int B_REGS, int C_REGS, int 
         ip.acin = acin
         ip.pcin = 0.0
         ip.fpinmode = false
-        //               ++ +PCIN +M
-        ip.fpopmode = 7'b00_111_01
+        //               ++  +C +M
+        ip.fpopmode = 7'b00_110_01
     }
 
     fpm_out = ip.fpm_out
@@ -1562,7 +1562,7 @@ module dspfp32_mul_a_b_add_c_d#(int A_REGS, int B_REGS, int C_REGS, int D_REGS, 
 }
 
 module dspfp32_mul_a_b_pcout_add_c_nd#(int A_REGS, int B_REGS, int C_REGS, int D_REGS, int M_REGS) {
-    dspfp32_ip#(A_REGS: A_REGS, AC_REGS: A_REGS, B_REGS: B_REGS, C_REGS: C_REGS, D_REGS: D_REGS, M_REGS: M_REGS, OP_REGS: 0, ACIN: 0, BCIN: 0, DCOUT: 0, PCOUT_FPA: 1) ip
+    dspfp32_ip#(A_REGS: A_REGS, AC_REGS: A_REGS, B_REGS: B_REGS, C_REGS: C_REGS, D_REGS: D_REGS, M_REGS: M_REGS, OP_REGS: 0, ACIN: 0, BCIN: 0, DCOUT: 0, PCOUT_FPA: 0) ip
 
     clock aclk
     output float fpm_out'0
