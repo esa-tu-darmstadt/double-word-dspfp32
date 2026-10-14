@@ -52,20 +52,12 @@ DW TwoSum(float a, float b) {
 }
 
 DW Split(float x) {
-    float SplitC = 4097.0f;
-
-    float p = x * SplitC;
-    float q = x - p;
-    float x1 = p + q;
-    float x2 = x - x1;
-    log1("    SplitC", SplitC);
-    log1("    p", p);
-    log1("    q", q);
-    log1("    x1", x1);
-    log1("    x2", x2);
     DW res;
-    res.h = x1;
-    res.l = x2;
+    int b0 = *((int*) &x);
+    int b1 = b0 & 0xfffff000;
+    float b2 = *((float*) &b1);
+    res.h = b2;
+    res.l = x - res.h;
     return res;
 }
 
@@ -245,7 +237,7 @@ int main(int argc, char** argv) {
         log_level = 1;
         DW x = { h: -53960.7734375, l: 3.37515783309937 };
         DW y = { h: -83415.859375, l: -4.55084323883057 };
-        DWTimesDW_Fast(x, y);
+        FPTimesFP(x, y);
         return 0;
     }
 

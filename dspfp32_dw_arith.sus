@@ -357,7 +357,7 @@ module FPTimesFP {
     output float rh
     output float rl
 
-    TwoProd_LATE_RH r
+    TwoProd r
     r.a = x
     r.b = y
 
@@ -375,7 +375,7 @@ module DWTimesFP_Fast {
     output float rh
     output float rl
 
-    TwoProd_LATE_RH c
+    TwoProd c
     c.a = xh
     c.b = y
     float ch = c.rh_late
@@ -388,10 +388,8 @@ module DWTimesFP_Fast {
     float cl2 = dsp0.fpm_out
 
     // cl3 = c.l + cl2
-    dspfp32_mul_a_b_add_c_pcin#(A_REGS: 2, B_REGS: 0, C_REGS: 3, M_REGS: 2) dsp2
-    float cl2m = dsp2.fpm_out
-    dsp2.mul(cl2, 1.0)
-    dsp2.add(cl2m, cl)
+    dspfp32_mac_a_b_pcin#(A_REGS: 2, B_REGS: 0, M_REGS: 2) dsp2
+    dsp2.apply(cl2, 1.0, cl)
     float cl3c = dsp2.pcout
     float cl3 = dsp2.fpa_out
 
@@ -402,18 +400,17 @@ module DWTimesFP_Fast {
     float f_bc = cl3c
 
     // f_rh = f_a + f_b
-    dspfp32_add_c_pcin#(C_REGS: 1) fa_dsp0
-    fa_dsp0.apply(f_a, f_bc)
+    dspfp32_mul_a_b_add_c_pcin#(A_REGS: 1, B_REGS: 0, C_REGS: 3, M_REGS: 1) fa_dsp0
+    fa_dsp0.add(f_a, f_bc)
     float f_rhc = fa_dsp0.pcout
     float f_rh  = fa_dsp0.fpa_out
+    fa_dsp0.mul(f_rh, 1.0)
+    float f_rh2 = fa_dsp0.fpm_out
 
     // f_z = f_rh - f_a
-    dspfp32_mul_a_b_add_nc_pcin#(A_REGS: 1, B_REGS: 0, C_REGS: 2, M_REGS: 1) fa_dsp1
-    fa_dsp1.add(f_a, f_rhc)
+    dspfp32_mac_a_b_pcin#(A_REGS: 2, B_REGS: 1, M_REGS: 2) fa_dsp1
+    fa_dsp1.apply(f_a, -1.0, f_rhc)
     float f_z = fa_dsp1.pcout
-    // use free multiplier for delay
-    fa_dsp1.mul(f_rh, 1.0)
-    float f_rh2 = fa_dsp1.fpm_out
 
     // f_rl = f_b - f_z
     dsp0.add(f_b, f_z)
@@ -446,25 +443,27 @@ module DWTimesFP_Accurate {
     c.a = xh
     c.b = y
     float ch = c.rh
+    float chc = c.rhc
     float cl = c.rlc
 
-    dspfp32_mul_a_b_add_c_d#(A_REGS: 1, B_REGS: 1, C_REGS: 1, D_REGS: 1, M_REGS: 2) fts_dsp0
-    fts_dsp0.mul(xl, y)
+    // cl2 = x.l * y;
+    // fts_rh = fts_a + fts_b = ch + cl2 = x.l * y + ch
+    dspfp32_mac_a_b_pcin#(A_REGS: 1, B_REGS: 1, M_REGS: 1) fts_dsp0
+    fts_dsp0.apply(xl, y, chc)
     float cl2 = fts_dsp0.fpm_out
     // ################################
     // ##  inline FastTwoSum  #########
     float fts_a  = ch
     float fts_b  = cl2
-    fts_dsp0.add(fts_b, fts_a)
     float fts_rhc = fts_dsp0.pcout
     float fts_rh  = fts_dsp0.fpa_out
 
-    dspfp32_add_nc_pcin#(C_REGS: 2) fts_dsp1
+    dspfp32_add_nc_pcin#(C_REGS: 1) fts_dsp1
     fts_dsp1.apply(fts_a, fts_rhc)
     float fts_z   = fts_dsp1.pcout
     float _fts_t0 = fts_dsp1.fpa_out
 
-    dspfp32_add_c_npcin#(C_REGS: 3) fts_dsp2
+    dspfp32_add_c_npcin#(C_REGS: 2) fts_dsp2
     fts_dsp2.apply(fts_b, fts_z)
     float _fts_rlc = fts_dsp2.pcout
     float fts_rl   = fts_dsp2.fpa_out
@@ -472,12 +471,12 @@ module DWTimesFP_Accurate {
     float th = fts_rh
     float tl = fts_rl
 
-    dspfp32_add_c_pcin#(C_REGS: 3) dsp1
+    dspfp32_add_c_pcin#(C_REGS: 2) dsp1
     dsp1.apply(tl, cl)
     float tl2 = dsp1.fpa_out
     float tl2c = dsp1.pcout
 
-    FastTwoSum#(A_LATENCY: 6, LATE_RH: true) r
+    FastTwoSum#(A_LATENCY: 5, LATE_RH: true) r
     r.a = th
     r.b = tl2
     r.bc = tl2c
@@ -508,7 +507,7 @@ module DWTimesDW_Fast {
     output float rh
     output float rl
 
-    TwoProd_LATE_RH c
+    TwoProd c
     c.a = xh
     c.b = yh
     float ch = c.rh_late
@@ -528,10 +527,8 @@ module DWTimesDW_Fast {
     float cl2 = dsp1.fpa_out
 
     // cl3 = c.l + cl2
-    dspfp32_mul_a_b_add_c_pcin#(A_REGS: 2, B_REGS: 0, C_REGS: 2, M_REGS: 2) dsp2
-    float cl2m = dsp2.fpm_out
-    dsp2.mul(cl2, 1.0)
-    dsp2.add(cl2m, cl)
+    dspfp32_add_c_pcin#(C_REGS: 3) dsp2
+    dsp2.apply(cl2, cl)
     float cl3c = dsp2.pcout
     float cl3  = dsp2.fpa_out
 
@@ -542,18 +539,18 @@ module DWTimesDW_Fast {
     float f_bc = cl3c
 
     // f_rh = f_a + f_b
-    dspfp32_add_c_pcin#(C_REGS: 1) fa_dsp0
-    fa_dsp0.apply(f_a, f_bc)
+    dspfp32_mul_a_b_add_c_pcin#(A_REGS: 1, B_REGS: 0, C_REGS: 3, M_REGS: 1) fa_dsp0
+    fa_dsp0.add(f_a, f_bc)
     float f_rhc = fa_dsp0.pcout
     float f_rh  = fa_dsp0.fpa_out
+    // use free multiplier for delay
+    fa_dsp0.mul(f_rh, 1.0)
+    float f_rh2 = fa_dsp0.fpm_out
 
     // f_z = f_rh - f_a
-    dspfp32_mul_a_b_add_nc_pcin#(A_REGS: 1, B_REGS: 0, C_REGS: 2, M_REGS: 1) fa_dsp1
-    fa_dsp1.add(f_a, f_rhc)
+    dspfp32_mac_a_b_pcin#(A_REGS: 2, B_REGS: 0, M_REGS: 2) fa_dsp1
+    fa_dsp1.apply(f_a, -1.0, f_rhc)
     float f_z = fa_dsp1.pcout
-    // use free multiplier for delay
-    fa_dsp1.mul(f_rh, 1.0)
-    float f_rh2 = fa_dsp1.fpm_out
 
     // f_rl = f_b - f_z
     dsp0.add(f_b, f_z)
@@ -749,7 +746,9 @@ module TwoProd {
     input float b'0
 
     output float rh
+    output float rhc
     output float rh_late
+    output float rhc_late
     output float rl
     output float rlc
 
@@ -757,244 +756,82 @@ module TwoProd {
     // ##  inline Split  ##############
     float sa1_x = a
 
-    gen float SplitC = 4097.0
+    // hi = (float) ((int) (x & 0xbfffff000))
+    bool[32] sa1_xb = ToBits(sa1_x)
+    bool[32] sa1_hib = Concat(12'b0, sa1_xb[12+:20])
+    float sa1_h = FromBits(sa1_hib)
 
-    // p = x * SplitC
-    // q = x - p
-    dspfp32_mac_na_b_c#(A_REGS: 1, B_REGS: 1, C_REGS: 2, M_REGS: 1) sa1_dsp0
-    sa1_dsp0.apply(sa1_x, SplitC, sa1_x)
-    float sa1_p   = sa1_dsp0.fpm_out
-    float _sa1_t0 = sa1_dsp0.fpa_out
-    float sa1_q   = sa1_dsp0.pcout
-    float sa1_xc  = sa1_dsp0.acout
+    // lo = x - hi
+    dspfp32_mul_a_b_pcout_add_c_nd#(A_REGS: 1, B_REGS: 1, C_REGS: 1, D_REGS: 1, M_REGS: 1) sa1_dsp1
+    sa1_dsp1.add(sa1_x, sa1_h)
+    float sa1_l  = sa1_dsp1.fpa_out
 
-    // x1 = p + q
-    dspfp32_mul_acin_b_add_c_pcin#(A_REGS: 0, B_REGS: 1, C_REGS: 1, M_REGS: 2) sa1_dsp1
-    sa1_dsp1.add(sa1_p, sa1_q)
-    float sa1_x1  = sa1_dsp1.fpa_out
-    float sa1_x1c = sa1_dsp1.pcout
-    float sa1_xcc = sa1_dsp1.acout
-
-    // x2 = x - x1
-    dspfp32_mac_acin_b_npcin#(A_REGS: 1, B_REGS: 0, M_REGS: 2) sa1_dsp2
-    sa1_dsp2.apply(sa1_xcc, 1.0, sa1_x1c)
-    float _sa1_t4 = sa1_dsp2.fpm_out
-    float sa1_x2  = sa1_dsp2.fpa_out
-    float _sa1_t5 = sa1_dsp2.pcout
-    float a1h = sa1_x1
-    float a1l = sa1_x2
+    float a1h = sa1_h
+    float a1l = sa1_l
     // ################################
 
     // ################################
     // ##  inline Split  ##############
     float sb1_x = b
 
-    // p = x * SplitC
-    // q = x - p
-    dspfp32_mac_na_b_c#(A_REGS: 1, B_REGS: 1, C_REGS: 2, M_REGS: 1) sb1_dsp0
-    sb1_dsp0.apply(SplitC, sb1_x, sb1_x)
-    float sb1_p   = sb1_dsp0.fpm_out
-    float _sb1_t0 = sb1_dsp0.fpa_out
-    float sb1_q   = sb1_dsp0.pcout
-    float sb1_xc  = sb1_dsp0.bcout
+    // hi = (float) ((int) (x & 0xbfffff000))
+    bool[32] sb1_xb = ToBits(sb1_x)
+    bool[32] sb1_hib = Concat(12'b0, sb1_xb[12+:20])
+    float sb1_h = FromBits(sb1_hib)
 
-    // x1 = p + q
-    dspfp32_mul_a_d_add_c_pcin_carry_bcin#(A_REGS: 2, B_REGS: 0, C_REGS: 1, D_REGS: 1, M_REGS: 2) sb1_dsp1
-    sb1_dsp1.add(sb1_p, sb1_q)
-    sb1_dsp1.carry(sb1_xc)
-    float sb1_x1  = sb1_dsp1.fpa_out
-    float sb1_x1c = sb1_dsp1.pcout
-    float sb1_xcc = sb1_dsp1.bcout
+    // lo = x - hi
+    dspfp32_mul_a_b_pcout_add_c_nd#(A_REGS: 1, B_REGS: 1, C_REGS: 1, D_REGS: 1, M_REGS: 2) sb1_dsp1
+    sb1_dsp1.add(sb1_x, sb1_h)
+    float sb1_l  = sb1_dsp1.fpa_out
 
-    // x2 = x - x1
-    dspfp32_mac_a_bcin_npcin#(A_REGS: 0, B_REGS: 1, M_REGS: 2) sb1_dsp2
-    sb1_dsp2.apply(1.0, sb1_xcc, sb1_x1c)
-    float sb1_x2  = sb1_dsp2.fpa_out
-    float _sb1_t5 = sb1_dsp2.pcout
-    float b1h = sb1_x1
-    float b1l = sb1_x2
+    float b1h = sb1_h
+    float b1l = sb1_l
     // ################################
 
     // use free multipliers
-    // rh = a * b = sa1_xc * b
-    sa1_dsp1.mul(sa1_xc, b)
+    // rh = a * b
+    sa1_dsp1.mul(a, b)
     float rh2 = sa1_dsp1.fpm_out
+    float rh2c = sa1_dsp1.pcout
     rh = rh2
+    rhc = rh2c
     // delay rh
     sb1_dsp1.mul(rh2, 1.0)
     float rh3 = sb1_dsp1.fpm_out
+    float rh3c = sb1_dsp1.pcout
     rh_late = rh3
-
-    // r.l = ((a1.h * b1.h - r.h) + a1.h * b1.l + a1.l * b1.h) + a1.l * b1.l;
-
-    // tmp0 = a1h * b1h - rh
-    dspfp32_mac_a_b_nc#(A_REGS: 1, B_REGS: 1, C_REGS: 3, M_REGS: 1) dsp1
-    dsp1.apply(a1h, b1h, rh2)
-    float _t3   = dsp1.fpm_out
-    float _t4   = dsp1.fpa_out
-    float tmp0  = dsp1.pcout
-    float a1hc  = dsp1.acout
-    float b1hc  = dsp1.bcout
-
-    // tmp1 = a1h * b1l + tmp0
-    dspfp32_mac_acin_d_pcin_carry_bcin#(A_REGS: 1, B_REGS: 1, D_REGS: 1, M_REGS: 1) dsp2
-    dsp2.apply(a1hc, b1l, tmp0)
-    dsp2.carry(b1hc)
-    float tmp1 = dsp2.pcout
-    float b1hcc = dsp2.bcout
-
-    // tmp2 = a1l * b1h + tmp1
-    dspfp32_mac_a_bcin_pcin_carry_d#(A_REGS: 1, B_REGS: 0, D_REGS: 1, M_REGS: 2) dsp3
-    dsp3.apply(a1l, b1hcc, tmp1)
-    dsp3.carry(b1l)
-    float a1lc = dsp3.acout
-    float b1lc = dsp3.bcout
-    float tmp2 = dsp3.pcout
-
-    // tmp3 = a1l * b1l + tmp2
-    dspfp32_mac_acin_bcin_pcin#(A_REGS: 1, B_REGS: 1, M_REGS: 2) dsp4
-    dsp4.apply(a1lc, b1lc, tmp2)
-    float tmp3 = dsp4.fpa_out
-    rl          = tmp3
-    rlc         = dsp4.pcout
-
-    /*
-    two<T> res;
-    res.h = a * b;
-
-    two<T> a1 = Split(a);
-    two<T> b1 = Split(b);
-
-    // Order must be preserved to ensure the proven error bounds
-    res.l = ((a1.h * b1.h - res.h) + a1.h * b1.l + a1.l * b1.h) + a1.l * b1.l;
-    return res;
-
-    Split(x):
-        T p = x * SplitC;
-        T q = x - p;
-        T x1 = p + q;
-        T x2 = x - x1;
-        return {x1, x2};
-    */
-}
-
-module TwoProd_LATE_RH {
-    clock aclk
-
-    input float a'0
-    input float b'0
-
-    output float rh
-    output float rh_late
-    output float rl
-    output float rlc
-
-    // ################################
-    // ##  inline Split  ##############
-    float sa1_x = a
-
-    gen int MANTISSA_BITS = 22
-    gen int SplitS = pow#(B: 2, E: MANTISSA_BITS / 2) + 1
-    gen float SplitC = 2049.0
-
-    // p = x * SplitC
-    // q = x - p
-    dspfp32_mac_na_b_c#(A_REGS: 1, B_REGS: 1, C_REGS: 2, M_REGS: 1) sa1_dsp0
-    sa1_dsp0.apply(sa1_x, SplitC, sa1_x)
-    float sa1_p   = sa1_dsp0.fpm_out
-    float _sa1_t0 = sa1_dsp0.fpa_out
-    float sa1_q   = sa1_dsp0.pcout
-    float sa1_xc  = sa1_dsp0.acout
-
-    // x1 = p + q
-    dspfp32_mul_acin_b_add_c_pcin#(A_REGS: 0, B_REGS: 0, C_REGS: 1, M_REGS: 2) sa1_dsp1
-    sa1_dsp1.mul(sa1_xc, 1.0)
-    sa1_dsp1.add(sa1_p, sa1_q)
-    float sa1_x1  = sa1_dsp1.fpa_out
-    float sa1_x1c = sa1_dsp1.pcout
-    float sa1_xccc = sa1_dsp1.fpm_out
-
-    // x2 = x - x1
-    dspfp32_mul_a_b_pcout_add_c_npcin#(A_REGS: 1, B_REGS: 1, C_REGS: 1, M_REGS: 2) sa1_dsp2
-    sa1_dsp2.add(sa1_xccc, sa1_x1c)
-    float sa1_x2  = sa1_dsp2.fpa_out
-    float a1h = sa1_x1
-    float a1l = sa1_x2
-    // ################################
-
-    // ################################
-    // ##  inline Split  ##############
-    float sb1_x = b
-
-    // p = x * SplitC
-    // q = x - p
-    dspfp32_mac_na_b_c#(A_REGS: 1, B_REGS: 1, C_REGS: 2, M_REGS: 1) sb1_dsp0
-    sb1_dsp0.apply(sb1_x, SplitC, sb1_x)
-    float sb1_p   = sb1_dsp0.fpm_out
-    float _sb1_t0 = sb1_dsp0.fpa_out
-    float sb1_q   = sb1_dsp0.pcout
-    float sb1_xc  = sb1_dsp0.acout
-
-    // x1 = p + q
-    dspfp32_mul_acin_b_add_c_pcin#(A_REGS: 0, B_REGS: 0, C_REGS: 1, M_REGS: 2) sb1_dsp1
-    sb1_dsp1.mul(sb1_xc, 1.0)
-    sb1_dsp1.add(sb1_p, sb1_q)
-    float sb1_x1  = sb1_dsp1.fpa_out
-    float sb1_x1c = sb1_dsp1.pcout
-    float sb1_xccc = sb1_dsp1.fpm_out
-
-    // x2 = x - x1
-    dspfp32_mul_a_b_pcout_add_c_npcin#(A_REGS: 2, B_REGS: 0, C_REGS: 1, M_REGS: 2) sb1_dsp2
-    sb1_dsp2.add(sb1_xccc, sb1_x1c)
-    float sb1_x2  = sb1_dsp2.fpa_out
-    float _sb1_t5 = sb1_dsp2.pcout
-    float b1h = sb1_x1
-    float b1l = sb1_x2
-    // ################################
-
-    // use free multipliers
-    // rh = a * b = sa1_xc * b
-    sa1_dsp2.mul(sa1_xccc, sb1_xccc)
-    float rh2 = sa1_dsp2.fpm_out
-    float rhc = sa1_dsp2.pcout
-    rh = rh2
-    // delay rh
-    sb1_dsp2.mul(rh2, 1.0)
-    float rh3 = sb1_dsp2.fpm_out
-    rh_late = rh3
+    rhc_late = rh3c
 
     // r.l = ((a1.h * b1.h - r.h) + a1.h * b1.l + a1.l * b1.h) + a1.l * b1.l;
 
     // tmp0 = a1h * b1h - rh
     dspfp32_mac_a_b_npcin#(A_REGS: 1, B_REGS: 1, M_REGS: 1) dsp1
-    dsp1.apply(a1h, b1h, rhc)
-    float _t3   = dsp1.fpm_out
-    float _t4   = dsp1.fpa_out
-    float tmp0  = dsp1.pcout
-    float a1hc  = dsp1.acout
-    float b1hc  = dsp1.bcout
+    dsp1.apply(a1h, b1h, rh2c)
+    float tmp0 = dsp1.fpa_out
+    float a1hc = dsp1.acout
+    float b1hc = dsp1.bcout
 
     // tmp1 = a1h * b1l + tmp0
-    dspfp32_mac_acin_d_pcin_carry_bcin#(A_REGS: 1, B_REGS: 1, D_REGS: 1, M_REGS: 1) dsp2
-    dsp2.apply(a1hc, b1l, tmp0)
+    dspfp32_mac_acin_d_c_carry_bcin#(A_REGS: 2, B_REGS: 1, C_REGS: 1, D_REGS: 1, M_REGS: 1) dsp2
+    dsp2.mac(a1hc, b1l, tmp0)
     dsp2.carry(b1hc)
     float tmp1 = dsp2.pcout
     float b1hcc = dsp2.bcout
 
     // tmp2 = a1l * b1h + tmp1
-    dspfp32_mac_a_bcin_pcin_carry_d#(A_REGS: 1, B_REGS: 0, D_REGS: 1, M_REGS: 2) dsp3
+    dspfp32_mac_a_bcin_pcin_carry_d#(A_REGS: 1, B_REGS: 1, D_REGS: 1, M_REGS: 2) dsp3
     dsp3.apply(a1l, b1hcc, tmp1)
     dsp3.carry(b1l)
-    float a1lc = dsp3.acout
-    float b1lc = dsp3.bcout
     float tmp2 = dsp3.pcout
+    float b1lc = dsp3.bcout
 
     // tmp3 = a1l * b1l + tmp2
-    dspfp32_mac_acin_bcin_pcin#(A_REGS: 1, B_REGS: 1, M_REGS: 2) dsp4
-    dsp4.apply(a1lc, b1lc, tmp2)
+    dspfp32_mac_a_bcin_pcin#(A_REGS: 2, B_REGS: 1, M_REGS: 2) dsp4
+    dsp4.apply(a1l, b1lc, tmp2)
     float tmp3 = dsp4.fpa_out
+    float tmp3c = dsp4.pcout
     rl          = tmp3
-    rlc         = dsp4.pcout
+    rlc         = tmp3c
 
     /*
     two<T> res;
@@ -1007,12 +844,10 @@ module TwoProd_LATE_RH {
     res.l = ((a1.h * b1.h - res.h) + a1.h * b1.l + a1.l * b1.h) + a1.l * b1.l;
     return res;
 
-    Split(x):
-        T p = x * SplitC;
-        T q = x - p;
-        T x1 = p + q;
-        T x2 = x - x1;
-        return {x1, x2};
+    Split(float x):
+        float hi = (float) ((int) x & 0xfffff000)
+        float lo = RN(x - hi)
+        return {hi, lo};
     */
 }
 
@@ -1251,6 +1086,37 @@ module dspfp32_mul_a_b#(int A_REGS, int B_REGS, int M_REGS) {
     pcout = ip.pcout
 }
 
+module dspfp32_mac_a_b_c#(int A_REGS, int B_REGS, int C_REGS, int M_REGS) {
+    clock aclk
+
+    output float fpm_out'0
+    output float fpa_out'1
+    output float acout'-M_REGS
+    output float bcout'-M_REGS
+    output float pcout'1
+
+    dspfp32_ip#(A_REGS: A_REGS, AC_REGS: A_REGS, B_REGS: B_REGS, C_REGS: C_REGS, D_REGS: 0, M_REGS: M_REGS, OP_REGS: 0, ACIN: 0, BCIN: 0, DCOUT: 0, PCOUT_FPA: 1) ip
+
+    interface apply: float a'-(A_REGS+M_REGS), float b'-(B_REGS+M_REGS), float c'-(C_REGS) {
+        ip.a = a
+        ip.b = b
+        ip.c = c
+        ip.d = 0.0
+        ip.acin = 0.0
+        ip.bcin = 0.0
+        ip.pcin = 0.0
+        ip.fpinmode = true
+        //               ++ +C  +M
+        ip.fpopmode = 7'b00_110_01
+    }
+
+    fpm_out = ip.fpm_out
+    fpa_out = ip.fpa_out
+    acout = ip.acout
+    bcout = ip.bcout
+    pcout = ip.pcout
+}
+
 module dspfp32_mac_a_b_pcin#(int A_REGS, int B_REGS, int M_REGS) {
     clock aclk
 
@@ -1342,6 +1208,43 @@ module dspfp32_mac_a_b_nc#(int A_REGS, int B_REGS, int C_REGS, int M_REGS) {
     acout = ip.acout
     bcout = ip.bcout
     pcout = ip.pcout
+}
+
+module dspfp32_mac_acin_d_c_carry_bcin#(int A_REGS, int B_REGS, int C_REGS, int D_REGS, int M_REGS) {
+    clock aclk
+
+    output float fpm_out'0
+    output float fpa_out'1
+    output float pcout'1
+
+    dspfp32_ip#(A_REGS: A_REGS, AC_REGS: A_REGS, B_REGS: B_REGS, C_REGS: C_REGS, D_REGS: D_REGS, M_REGS: M_REGS, OP_REGS: 0, ACIN: 1, BCIN: 1, DCOUT: 0, PCOUT_FPA: 1) ip
+
+    interface mac: float acin'-(A_REGS+M_REGS), float d'-(D_REGS+M_REGS), float c'-(C_REGS) {
+        ip.a = 0.0
+        ip.c = c
+        ip.d = d
+        ip.acin = acin
+        ip.pcin = 0.0
+        ip.fpinmode = false
+        //               ++  +C +M
+        ip.fpopmode = 7'b00_110_01
+    }
+
+    fpm_out = ip.fpm_out
+    fpa_out = ip.fpa_out
+    float _acout = ip.acout
+    pcout = ip.pcout
+
+    domain bclk
+    output float bcout'0
+
+    interface carry: float bcin'-(B_REGS) {
+        ip.b = 0.0
+        ip.bcin = bcin
+    }
+
+    bcout = ip.bcout
+
 }
 
 module dspfp32_mac_acin_b_pcin#(int A_REGS, int B_REGS, int M_REGS) {
@@ -1656,6 +1559,38 @@ module dspfp32_mul_a_b_add_c_d#(int A_REGS, int B_REGS, int C_REGS, int D_REGS, 
     }
     fpa_out = ip.fpa_out
     pcout = ip.pcout
+}
+
+module dspfp32_mul_a_b_pcout_add_c_nd#(int A_REGS, int B_REGS, int C_REGS, int D_REGS, int M_REGS) {
+    dspfp32_ip#(A_REGS: A_REGS, AC_REGS: A_REGS, B_REGS: B_REGS, C_REGS: C_REGS, D_REGS: D_REGS, M_REGS: M_REGS, OP_REGS: 0, ACIN: 0, BCIN: 0, DCOUT: 0, PCOUT_FPA: 0) ip
+
+    clock aclk
+    output float fpm_out'0
+    output float pcout'0
+
+    interface mul: float a'-(A_REGS+M_REGS), float b'-(B_REGS+M_REGS) {
+        ip.a = a
+        ip.b = b
+        ip.acin = 0.0
+        ip.bcin = 0.0
+        ip.fpinmode = true
+        float _acout = ip.acout
+        float _bcout = ip.bcout
+    }
+    fpm_out = ip.fpm_out
+    pcout = ip.pcout
+
+    domain bclk
+    output float fpa_out'1
+
+    interface add: float c'-C_REGS, float d'-D_REGS {
+        ip.c = c
+        ip.d = d
+        ip.pcin = 0.0
+        //               +- +C  -D
+        ip.fpopmode = 7'b01_110_11
+    }
+    fpa_out = ip.fpa_out
 }
 
 module dspfp32_mul_a_b_add_c_pcin#(int A_REGS, int B_REGS, int C_REGS, int M_REGS) {
