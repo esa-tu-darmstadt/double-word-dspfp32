@@ -805,15 +805,15 @@ module TwoProd {
     // r.l = ((a1.h * b1.h - r.h) + a1.h * b1.l + a1.l * b1.h) + a1.l * b1.l;
 
     // tmp0 = a1h * b1h - rh
-    dspfp32_mac_a_b_npcin#(A_REGS: 1, B_REGS: 1, M_REGS: 1) dsp1
-    dsp1.apply(a1h, b1h, rh2c)
-    float tmp0 = dsp1.fpa_out
+    dspfp32_mac_a_b_nc#(A_REGS: 1, B_REGS: 1, C_REGS: 1, M_REGS: 2) dsp1
+    dsp1.apply(a1h, b1h, rh2)
+    float tmp0 = dsp1.pcout
     float a1hc = dsp1.acout
     float b1hc = dsp1.bcout
 
     // tmp1 = a1h * b1l + tmp0
-    dspfp32_mac_acin_d_c_carry_bcin#(A_REGS: 2, B_REGS: 1, C_REGS: 1, D_REGS: 1, M_REGS: 1) dsp2
-    dsp2.mac(a1hc, b1l, tmp0)
+    dspfp32_mac_acin_d_pcin_carry_bcin#(A_REGS: 2, B_REGS: 1, D_REGS: 1, M_REGS: 1) dsp2
+    dsp2.apply(a1hc, b1l, tmp0)
     dsp2.carry(b1hc)
     float tmp1 = dsp2.pcout
     float b1hcc = dsp2.bcout
